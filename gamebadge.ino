@@ -1,4 +1,6 @@
 #include "badge.h"
+#include "badge_input.h"
+
 
 void setup()
 {
@@ -21,4 +23,8 @@ void setup()
 
 void loop()
 {
+	uint32_t button = badge_input_get_event(1000);
+	Serial.print(button);
+	Serial.print(" ");
+	Serial.println(badge_input_button_state, HEX);
 }
