@@ -18,8 +18,8 @@ struct scan
 	int wnd[64];
 	byte buf[256];
 	byte pal1[128];
-	un16 pal2[64];
-	un32 pal4[64];
+	uint16_t pal2[64];
+	uint32_t pal4[64];
 	byte pri[256];
 	struct vissprite vs[16];
 	int ns, l, x, y, s, t, u, v, wx, wy, wt, wv;
@@ -44,8 +44,8 @@ struct lcd
 	byte pal[128];
 };
 
-extern struct lcd lcd;
-extern struct scan scan;
+extern struct lcd * lcd;
+extern struct scan * scan;
 
 void updatepatpix();
 void tilebuf();

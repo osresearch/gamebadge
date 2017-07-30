@@ -10,9 +10,9 @@
 
 union reg
 {
-	byte b[2][2];
-	word w[2];
-	un32 d; /* padding for alignment, carry */
+	uint8_t b[2][2];
+	uint16_t w[2];
+	uint32_t d; /* padding for alignment, carry */
 };
 
 struct cpu

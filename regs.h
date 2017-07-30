@@ -87,7 +87,7 @@
 
 
 
-#define REG(n) ram.hi[(n)]
+#define REG(n) ram->hi[(n)]
 
 
 

@@ -45,8 +45,8 @@ struct ram
 
 
 extern struct mbc mbc;
-extern struct rom rom;
-extern struct ram ram;
+extern struct rom * rom;
+extern struct ram * ram;
 
 
 

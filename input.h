@@ -111,7 +111,7 @@ typedef struct keytable_s
 } keytable_t;
 
 extern keytable_t keytable[];
-extern char keystates[MAX_KEYS];
+//extern char keystates[MAX_KEYS];
 extern int nkeysdown;
 
 

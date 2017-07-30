@@ -4,12 +4,41 @@
 #include "fb.h"
 #include "sys.h"
 
-static byte palmap[32768];
+#if 1
+// hack for the grayscale display
+void pal_lock(byte n)
+{
+}
+
+byte pal_getcolor(int c, int r, int g, int b)
+{
+	// average the r/g/b and return that
+	(void) c;
+	return (r + g + b) / 3;
+}
+
+void pal_release(byte n)
+{
+}
+
+
+void pal_expire()
+{
+}
+
+
+void pal_set332()
+{
+}
+
+#else
+
+static byte * palmap;
 static byte pallock[256];
 static int palrev[256];
 
 /* Course color mapping, for when palette is exhausted. */
-static byte crsmap[4][32768];
+static byte * crsmap[4];
 static int crsrev[4][256];
 static const int crsmask[4] = { 0x7BDE, 0x739C, 0x6318, 0x4210 };
 
@@ -89,6 +118,13 @@ byte pal_getcolor(int c, int r, int g, int b)
 {
 	byte n;
 	static byte l;
+	if (palmap == NULL)
+	{
+		palmap = malloc(32768);
+		for(int i = 0 ; i < 4 ; i++)
+			crsmap[i] = malloc(32768);
+	}
+
 	n = palmap[c];
 	if (n && pallock[n] && palrev[n] == c)
 	{
@@ -144,7 +180,5 @@ void pal_set332()
 			   (g<<5)|(g<<2)|(g>>1), (b<<6)|(b<<4)|(b<<2)|b);
 }
 
-
-
-
+#endif
 

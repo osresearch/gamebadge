@@ -13,37 +13,43 @@
 #include "asm.h"
 #endif
 
-struct lcd lcd;
+struct lcd * lcd;
 
-struct scan scan;
+struct scan * scan;
 
-#define BG (scan.bg)
-#define WND (scan.wnd)
-#define BUF (scan.buf)
-#define PRI (scan.pri)
+#define BG (scan->bg)
+#define WND (scan->wnd)
+#define BUF (scan->buf)
+#define PRI (scan->pri)
 
-#define PAL1 (scan.pal1)
-#define PAL2 (scan.pal2)
-#define PAL4 (scan.pal4)
+#define PAL1 (scan->pal1)
+#define PAL2 (scan->pal2)
+#define PAL4 (scan->pal4)
 
-#define VS (scan.vs) /* vissprites */
-#define NS (scan.ns)
+#define VS (scan->vs) /* vissprites */
+#define NS (scan->ns)
 
-#define L (scan.l) /* line */
-#define X (scan.x) /* screen position */
-#define Y (scan.y)
-#define S (scan.s) /* tilemap position */
-#define T (scan.t)
-#define U (scan.u) /* position within tile */
-#define V (scan.v)
-#define WX (scan.wx)
-#define WY (scan.wy)
-#define WT (scan.wt)
-#define WV (scan.wv)
+#define L (scan->l) /* line */
+#define X (scan->x) /* screen position */
+#define Y (scan->y)
+#define S (scan->s) /* tilemap position */
+#define T (scan->t)
+#define U (scan->u) /* position within tile */
+#define V (scan->v)
+#define WX (scan->wx)
+#define WY (scan->wy)
+#define WT (scan->wt)
+#define WV (scan->wv)
 
-byte patpix[4096][8][8];
+byte * _patpix;
+//byte patpix[4096][8][8];
 byte patdirty[1024];
 byte anydirty;
+
+static byte * patpix(int i, int j, int k)
+{
+	return _patpix + k + 8 * j + 4096 * 8 * i;
+}
 
 static int scale = 1;
 static int density = 0;
@@ -55,10 +61,10 @@ static int sprdebug;
 
 #define DEF_PAL { 0x98d0e0, 0x68a0b0, 0x60707C, 0x2C3C3C }
 
-static int dmg_pal[4][4] = { DEF_PAL, DEF_PAL, DEF_PAL, DEF_PAL };
+static const int dmg_pal[4][4] = { DEF_PAL, DEF_PAL, DEF_PAL, DEF_PAL };
 
 static int usefilter, filterdmg;
-static int filter[3][4] = {
+static const int filter[3][4] = {
 	{ 195,  25,   0,  35 },
 	{  25, 170,  25,  35 },
 	{  25,  60, 125,  40 }
@@ -99,7 +105,7 @@ void updatepatpix()
 {
 	int i, j, k;
 	int a, c;
-	byte *vram = lcd.vbank[0];
+	byte *vram = lcd->vbank[0];
 	
 	if (!anydirty) return;
 	for (i = 0; i < 1024; i++)
@@ -115,20 +121,17 @@ void updatepatpix()
 			{
 				c = vram[a] & (1<<k) ? 1 : 0;
 				c |= vram[a+1] & (1<<k) ? 2 : 0;
-				patpix[i+1024][j][k] = c;
+				*patpix(i+1024, j, k) = c;
 			}
 			for (k = 0; k < 8; k++)
-				patpix[i][j][k] =
-					patpix[i+1024][j][7-k];
+				*patpix(i,j,k) = *patpix(i+1024,j,7-k);
 		}
 		for (j = 0; j < 8; j++)
 		{
 			for (k = 0; k < 8; k++)
 			{
-				patpix[i+2048][j][k] =
-					patpix[i][7-j][k];
-				patpix[i+3072][j][k] =
-					patpix[i+1024][7-j][k];
+				*patpix(i+2048,j,k) = *patpix(i,7-j,k);
+				*patpix(i+3072,j,k) = *patpix(i+1024,7-j,k);
 			}
 		}
 	}
@@ -145,15 +148,15 @@ void tilebuf()
 	byte *tilemap, *attrmap;
 	int *tilebuf;
 	int *wrap;
-	static int wraptable[64] =
+	static const int wraptable[64] =
 	{
 		0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,-32
 	};
 
 	base = ((R_LCDC&0x08)?0x1C00:0x1800) + (T<<5) + S;
-	tilemap = lcd.vbank[0] + base;
-	attrmap = lcd.vbank[1] + base;
+	tilemap = lcd->vbank[0] + base;
+	attrmap = lcd->vbank[1] + base;
 	tilebuf = BG;
 	wrap = wraptable + S;
 	cnt = ((WX + 7) >> 3) + 1;
@@ -173,7 +176,7 @@ void tilebuf()
 		else
 			for (i = cnt; i > 0; i--)
 			{
-				*(tilebuf++) = (256 + ((n8)*tilemap))
+				*(tilebuf++) = (256 + ((int8_t)*tilemap))
 					| (((int)*attrmap & 0x08) << 6)
 					| (((int)*attrmap & 0x60) << 5);
 				*(tilebuf++) = (((int)*attrmap & 0x07) << 2);
@@ -192,7 +195,7 @@ void tilebuf()
 		else
 			for (i = cnt; i > 0; i--)
 			{
-				*(tilebuf++) = (256 + ((n8)*(tilemap++)));
+				*(tilebuf++) = (256 + ((int8_t)*(tilemap++)));
 				tilemap += *(wrap++);
 			}
 	}
@@ -200,8 +203,8 @@ void tilebuf()
 	if (WX >= 160) return;
 	
 	base = ((R_LCDC&0x40)?0x1C00:0x1800) + (WT<<5);
-	tilemap = lcd.vbank[0] + base;
-	attrmap = lcd.vbank[1] + base;
+	tilemap = lcd->vbank[0] + base;
+	attrmap = lcd->vbank[1] + base;
 	tilebuf = WND;
 	cnt = ((160 - WX) >> 3) + 1;
 
@@ -218,7 +221,7 @@ void tilebuf()
 		else
 			for (i = cnt; i > 0; i--)
 			{
-				*(tilebuf++) = (256 + ((n8)*(tilemap++)))
+				*(tilebuf++) = (256 + ((int8_t)*(tilemap++)))
 					| (((int)*attrmap & 0x08) << 6)
 					| (((int)*attrmap & 0x60) << 5);
 				*(tilebuf++) = (((int)*(attrmap++)&7) << 2);
@@ -231,7 +234,7 @@ void tilebuf()
 				*(tilebuf++) = *(tilemap++);
 		else
 			for (i = cnt; i > 0; i--)
-				*(tilebuf++) = (256 + ((n8)*(tilemap++)));
+				*(tilebuf++) = (256 + ((int8_t)*(tilemap++)));
 	}
 }
 
@@ -247,19 +250,22 @@ void bg_scan()
 	tile = BG;
 	dest = BUF;
 	
-	src = patpix[*(tile++)][V] + U;
+	//src = patpix[*(tile++)][V] + U;
+	src = patpix(*(tile++),V,U);
 	memcpy(dest, src, 8-U);
 	dest += 8-U;
 	cnt -= 8-U;
 	if (cnt <= 0) return;
 	while (cnt >= 8)
 	{
-		src = patpix[*(tile++)][V];
+		//src = patpix[*(tile++)][V];
+		src = patpix(*(tile++),V,0);
 		MEMCPY8(dest, src);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix[*tile][V];
+	//src = patpix[*tile][V];
+	src = patpix(*tile,V,0);
 	while (cnt--)
 		*(dest++) = *(src++);
 }
@@ -277,12 +283,13 @@ void wnd_scan()
 	
 	while (cnt >= 8)
 	{
-		src = patpix[*(tile++)][WV];
+		//src = patpix[*(tile++)][WV];
+		src = patpix(*(tile++),WV,0);
 		MEMCPY8(dest, src);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix[*tile][WV];
+	src = patpix(*tile,WV,0);
 	while (cnt--)
 		*(dest++) = *(src++);
 }
@@ -294,7 +301,7 @@ static void blendcpy(byte *dest, byte *src, byte b, int cnt)
 
 static int priused(void *attr)
 {
-	un32 *a = attr;
+	uint32_t *a = attr;
 	return (int)((a[0]|a[1]|a[2]|a[3]|a[4]|a[5]|a[6]|a[7])&0x80808080);
 }
 
@@ -307,7 +314,7 @@ void bg_scan_pri()
 	i = S;
 	cnt = WX;
 	dest = PRI;
-	src = lcd.vbank[1] + ((R_LCDC&0x08)?0x1C00:0x1800) + (T<<5);
+	src = lcd->vbank[1] + ((R_LCDC&0x08)?0x1C00:0x1800) + (T<<5);
 
 	if (!priused(src))
 	{
@@ -337,7 +344,7 @@ void wnd_scan_pri()
 	i = 0;
 	cnt = 160 - WX;
 	dest = PRI + WX;
-	src = lcd.vbank[1] + ((R_LCDC&0x40)?0x1C00:0x1800) + (WT<<5);
+	src = lcd->vbank[1] + ((R_LCDC&0x40)?0x1C00:0x1800) + (WT<<5);
 	
 	if (!priused(src))
 	{
@@ -366,19 +373,20 @@ void bg_scan_color()
 	tile = BG;
 	dest = BUF;
 	
-	src = patpix[*(tile++)][V] + U;
+	//src = patpix[*(tile++)][V] + U;
+	src = patpix(*(tile++),V,U);
 	blendcpy(dest, src, *(tile++), 8-U);
 	dest += 8-U;
 	cnt -= 8-U;
 	if (cnt <= 0) return;
 	while (cnt >= 8)
 	{
-		src = patpix[*(tile++)][V];
+		src = patpix(*(tile++),V,0);
 		blendcpy(dest, src, *(tile++), 8);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix[*(tile++)][V];
+	src = patpix(*(tile++),V,0);
 	blendcpy(dest, src, *(tile++), cnt);
 }
 #endif
@@ -396,12 +404,12 @@ void wnd_scan_color()
 	
 	while (cnt >= 8)
 	{
-		src = patpix[*(tile++)][WV];
+		src = patpix(*(tile++),WV,0);
 		blendcpy(dest, src, *(tile++), 8);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix[*(tile++)][WV];
+	src = patpix(*(tile++),WV,0);
 	blendcpy(dest, src, *(tile++), cnt);
 }
 
@@ -418,7 +426,7 @@ void spr_count()
 	NS = 0;
 	if (!(R_LCDC & 0x02)) return;
 	
-	o = lcd.oam.obj;
+	o = lcd->oam.obj;
 	
 	for (i = 40; i; i--, o++)
 	{
@@ -441,7 +449,7 @@ void spr_enum()
 	NS = 0;
 	if (!(R_LCDC & 0x02)) return;
 
-	o = lcd.oam.obj;
+	o = lcd->oam.obj;
 	
 	for (i = 40; i; i--, o++)
 	{
@@ -473,7 +481,7 @@ void spr_enum()
 			}
 			if (o->flags & 0x40) pat ^= 1;
 		}
-		VS[NS].buf = patpix[pat][v];
+		VS[NS].buf = patpix(pat,v,0);
 		if (++NS == 10) break;
 	}
 	if (!sprsort || hw.cgb) return;
@@ -502,7 +510,7 @@ void spr_scan()
 	byte pal, b, ns = NS;
 	byte *src, *dest, *bg, *pri;
 	struct vissprite *vs;
-	static byte bgdup[256];
+	byte bgdup[256];
 
 	if (!ns) return;
 
@@ -724,7 +732,7 @@ static void updatepalette(int i)
 {
 	int c, r, g, b, y, u, v, rr, gg;
 
-	c = (lcd.pal[i<<1] | ((int)lcd.pal[(i<<1)|1] << 8)) & 0x7FFF;
+	c = (lcd->pal[i<<1] | ((int)lcd->pal[(i<<1)|1] << 8)) & 0x7FFF;
 	r = (c & 0x001F) << 3;
 	g = (c & 0x03E0) >> 2;
 	b = (c & 0x7C00) >> 7;
@@ -789,8 +797,8 @@ static void updatepalette(int i)
 
 void pal_write(int i, byte b)
 {
-	if (lcd.pal[i] == b) return;
-	lcd.pal[i] = b;
+	if (lcd->pal[i] == b) return;
+	lcd->pal[i] = b;
 	updatepalette(i>>1);
 }
 
@@ -818,7 +826,7 @@ void pal_write_dmg(int i, int mapnum, byte d)
 
 void vram_write(int a, byte b)
 {
-	lcd.vbank[R_VBK&1][a] = b;
+	lcd->vbank[R_VBK&1][a] = b;
 	if (a >= 0x1800) return;
 	patdirty[((R_VBK&1)<<9)+(a>>4)] = 1;
 	anydirty = 1;
@@ -846,24 +854,17 @@ void pal_dirty()
 
 void lcd_reset()
 {
-	memset(&lcd, 0, sizeof lcd);
+	if(!_patpix)
+		_patpix = malloc(4096*8*8);
+	if (!lcd)
+		lcd = malloc(sizeof *lcd);
+	if (!scan)
+		scan = malloc(sizeof *scan);
+
+	memset(lcd, 0, sizeof *lcd);
+	memset(scan, 0, sizeof *scan);
+
 	lcd_begin();
 	vram_dirty();
 	pal_dirty();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -248,13 +248,14 @@ get_tables (const unsigned char *data, long *p,
 static unsigned int buffer_ptr = 0;
 
 /* The buffer itself */
-static unsigned char buffer[BUFFER_SIZE];
+static unsigned char *buffer;
 
 static void
 pushout (unsigned char ch)
      /* Store one byte in the output buffer so it may be retrieved if
       * it is referenced again. */
 {
+  if(!buffer) buffer = malloc(BUFFER_SIZE);
   buffer[buffer_ptr++] = ch;
   buffer_ptr %= BUFFER_SIZE;
 }
@@ -263,6 +264,7 @@ static unsigned char
 pushin (unsigned int dist)
      /* Retrieve one byte, dist bytes away, from the output buffer. */
 {
+  if(!buffer) buffer = malloc(BUFFER_SIZE);
   return buffer[(buffer_ptr+(BUFFER_SIZE-dist))%BUFFER_SIZE];
 }
 

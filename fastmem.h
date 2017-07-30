@@ -84,14 +84,14 @@ static void writehi(int a, byte b)
 static byte readhi(int a)
 {
 	byte (*rd)() = hi_read[a];
-	return rd ? rd(a) : (ram.hi[a] | himask[a]);
+	return rd ? rd(a) : (ram->hi[a] | himask[a]);
 }
 
 static void writehi(int a, byte b)
 {
 	byte (*wr)() = hi_write[a];
 	if (wr) wr(a, b);
-	else ram.hi[a] = b & ~himask[a];
+	else ram->hi[a] = b & ~himask[a];
 }
 #endif
 

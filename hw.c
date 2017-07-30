@@ -51,7 +51,7 @@ void hw_dma(byte b)
 
 	a = ((addr)b) << 8;
 	for (i = 0; i < 160; i++, a++)
-		lcd.oam.mem[i] = readb(a);
+		lcd->oam.mem[i] = readb(a);
 }
 
 /* COMMENT A:
@@ -170,9 +170,16 @@ void pad_set(byte k, int st)
 
 void hw_reset()
 {
+	if (!ram)
+		ram = calloc(sizeof *ram, 1);
+	if (!rom)
+		rom = calloc(sizeof *rom, 1);
+
+	ets_printf("ram=%p rom=%p\n", ram, rom);
+
 	hw.ilines = hw.pad = 0;
 
-	memset(ram.hi, 0, sizeof ram.hi);
+	memset(ram->hi, 0, sizeof ram->hi);
 
 	R_P1 = 0xFF;
 	R_LCDC = 0x91;

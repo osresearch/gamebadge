@@ -3,6 +3,12 @@
 #include "badge/badge_eink.h"
 #include "badge/badge_eink_fb.h"
 
+#include "loader.h"
+#include "mem.h"
+#include "rtc.h"
+#include "emu.h"
+
+
 void setup()
 {
 	Serial.begin(115200);
@@ -36,11 +42,23 @@ void setup()
 	// turn the display all black
 	memset(badge_eink_fb, 0x00, BADGE_EINK_FB_LEN);
 	badge_eink_display(badge_eink_fb, DISPLAY_FLAG_LUT(0));
+
+	// startup the emulator
+	emu_reset();
+
+	// setup the ROM image
+	rom->name[0] = 'G';
+	rom->name[1] = 'B';
+	rom->name[2] = '\0';
+	rom_load((const byte*) "abcdef", 8);
+
 }
 
 
 void loop()
 {
+	emu_run();
+
 	uint32_t button = badge_input_get_event(10);
 	if (button != 0)
 	{
@@ -66,4 +84,21 @@ extern "C" void serial_int(int x);
 void serial_int(int x)
 {
 	Serial.println(x);
+}
+
+
+extern "C" int sys_elapsed(uint32_t * prev);
+
+int sys_elapsed(uint32_t * prev)
+{
+	uint32_t now = micros();
+	uint32_t delta = now - *prev;
+	*prev = now;
+	return delta;
+}
+
+extern "C" void sys_sleep(int us);
+void sys_sleep(int us)
+{
+	delayMicroseconds(us);
 }

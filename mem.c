@@ -12,8 +12,8 @@
 #include "sound.h"
 
 struct mbc mbc;
-struct rom rom;
-struct ram ram;
+struct rom * rom;
+struct ram * ram;
 
 
 /*
@@ -37,16 +37,16 @@ void mem_updatemap()
 	mbc.rambank &= (mbc.ramsize - 1);
 	
 	map = mbc.rmap;
-	map[0x0] = rom.bank[0];
-	map[0x1] = rom.bank[0];
-	map[0x2] = rom.bank[0];
-	map[0x3] = rom.bank[0];
+	map[0x0] = rom->bank[0];
+	map[0x1] = rom->bank[0];
+	map[0x2] = rom->bank[0];
+	map[0x3] = rom->bank[0];
 	if (mbc.rombank < mbc.romsize)
 	{
-		map[0x4] = rom.bank[mbc.rombank] - 0x4000;
-		map[0x5] = rom.bank[mbc.rombank] - 0x4000;
-		map[0x6] = rom.bank[mbc.rombank] - 0x4000;
-		map[0x7] = rom.bank[mbc.rombank] - 0x4000;
+		map[0x4] = rom->bank[mbc.rombank] - 0x4000;
+		map[0x5] = rom->bank[mbc.rombank] - 0x4000;
+		map[0x6] = rom->bank[mbc.rombank] - 0x4000;
+		map[0x7] = rom->bank[mbc.rombank] - 0x4000;
 	}
 	else map[0x4] = map[0x5] = map[0x6] = map[0x7] = NULL;
 	if (0 && (R_STAT & 0x03) == 0x03)
@@ -56,19 +56,19 @@ void mem_updatemap()
 	}
 	else
 	{
-		map[0x8] = lcd.vbank[R_VBK & 1] - 0x8000;
-		map[0x9] = lcd.vbank[R_VBK & 1] - 0x8000;
+		map[0x8] = lcd->vbank[R_VBK & 1] - 0x8000;
+		map[0x9] = lcd->vbank[R_VBK & 1] - 0x8000;
 	}
 	if (mbc.enableram && !(rtc.sel&8))
 	{
-		map[0xA] = ram.sbank[mbc.rambank] - 0xA000;
-		map[0xB] = ram.sbank[mbc.rambank] - 0xA000;
+		map[0xA] = ram->sbank[mbc.rambank] - 0xA000;
+		map[0xB] = ram->sbank[mbc.rambank] - 0xA000;
 	}
 	else map[0xA] = map[0xB] = NULL;
-	map[0xC] = ram.ibank[0] - 0xC000;
+	map[0xC] = ram->ibank[0] - 0xC000;
 	n = R_SVBK & 0x07;
-	map[0xD] = ram.ibank[n?n:1] - 0xD000;
-	map[0xE] = ram.ibank[0] - 0xE000;
+	map[0xD] = ram->ibank[n?n:1] - 0xD000;
+	map[0xE] = ram->ibank[0] - 0xE000;
 	map[0xF] = NULL;
 	
 	map = mbc.wmap;
@@ -77,14 +77,14 @@ void mem_updatemap()
 	map[0x8] = map[0x9] = NULL;
 	if (mbc.enableram && !(rtc.sel&8))
 	{
-		map[0xA] = ram.sbank[mbc.rambank] - 0xA000;
-		map[0xB] = ram.sbank[mbc.rambank] - 0xA000;
+		map[0xA] = ram->sbank[mbc.rambank] - 0xA000;
+		map[0xB] = ram->sbank[mbc.rambank] - 0xA000;
 	}
 	else map[0xA] = map[0xB] = NULL;
-	map[0xC] = ram.ibank[0] - 0xC000;
+	map[0xC] = ram->ibank[0] - 0xC000;
 	n = R_SVBK & 0x07;
-	map[0xD] = ram.ibank[n?n:1] - 0xD000;
-	map[0xE] = ram.ibank[0] - 0xE000;
+	map[0xD] = ram->ibank[n?n:1] - 0xD000;
+	map[0xE] = ram->ibank[0] - 0xE000;
 	map[0xF] = NULL;
 }
 
@@ -184,11 +184,11 @@ void ioreg_write(byte r, byte b)
 		break;
 	case RI_BCPS:
 		R_BCPS = b & 0xBF;
-		R_BCPD = lcd.pal[b & 0x3F];
+		R_BCPD = lcd->pal[b & 0x3F];
 		break;
 	case RI_OCPS:
 		R_OCPS = b & 0xBF;
-		R_OCPD = lcd.pal[64 + (b & 0x3F)];
+		R_OCPD = lcd->pal[64 + (b & 0x3F)];
 		break;
 	case RI_BCPD:
 		R_BCPD = b;
@@ -472,16 +472,16 @@ void mem_write(int a, byte b)
 			rtc_write(b);
 			break;
 		}
-		ram.sbank[mbc.rambank][a & 0x1FFF] = b;
+		ram->sbank[mbc.rambank][a & 0x1FFF] = b;
 		break;
 	case 0xC:
 		if ((a & 0xF000) == 0xC000)
 		{
-			ram.ibank[0][a & 0x0FFF] = b;
+			ram->ibank[0][a & 0x0FFF] = b;
 			break;
 		}
 		n = R_SVBK & 0x07;
-		ram.ibank[n?n:1][a & 0x0FFF] = b;
+		ram->ibank[n?n:1][a & 0x0FFF] = b;
 		break;
 	case 0xE:
 		if (a < 0xFE00)
@@ -492,7 +492,7 @@ void mem_write(int a, byte b)
 		if ((a & 0xFF00) == 0xFE00)
 		{
 			/* if (R_STAT & 0x02) break; */
-			if (a < 0xFEA0) lcd.oam.mem[a & 0xFF] = b;
+			if (a < 0xFEA0) lcd->oam.mem[a & 0xFF] = b;
 			break;
 		}
 		/* return writehi(a & 0xFF, b); */
@@ -503,7 +503,7 @@ void mem_write(int a, byte b)
 		}
 		if ((a & 0xFF80) == 0xFF80 && a != 0xFFFF)
 		{
-			ram.hi[a & 0xFF] = b;
+			ram->hi[a & 0xFF] = b;
 			break;
 		}
 		ioreg_write(a & 0xFF, b);
@@ -527,13 +527,13 @@ byte mem_read(int a)
 	{
 	case 0x0:
 	case 0x2:
-		return rom.bank[0][a];
+		return rom->bank[0][a];
 	case 0x4:
 	case 0x6:
-		return rom.bank[mbc.rombank][a & 0x3FFF];
+		return rom->bank[mbc.rombank][a & 0x3FFF];
 	case 0x8:
 		/* if ((R_STAT & 0x03) == 0x03) return 0xFF; */
-		return lcd.vbank[R_VBK&1][a & 0x1FFF];
+		return lcd->vbank[R_VBK&1][a & 0x1FFF];
 	case 0xA:
 		if (!mbc.enableram && mbc.type == MBC_HUC3)
 			return 0x01;
@@ -541,18 +541,18 @@ byte mem_read(int a)
 			return 0xFF;
 		if (rtc.sel&8)
 			return rtc.regs[rtc.sel&7];
-		return ram.sbank[mbc.rambank][a & 0x1FFF];
+		return ram->sbank[mbc.rambank][a & 0x1FFF];
 	case 0xC:
 		if ((a & 0xF000) == 0xC000)
-			return ram.ibank[0][a & 0x0FFF];
+			return ram->ibank[0][a & 0x0FFF];
 		n = R_SVBK & 0x07;
-		return ram.ibank[n?n:1][a & 0x0FFF];
+		return ram->ibank[n?n:1][a & 0x0FFF];
 	case 0xE:
 		if (a < 0xFE00) return mem_read(a & 0xDFFF);
 		if ((a & 0xFF00) == 0xFE00)
 		{
 			/* if (R_STAT & 0x02) return 0xFF; */
-			if (a < 0xFEA0) return lcd.oam.mem[a & 0xFF];
+			if (a < 0xFEA0) return lcd->oam.mem[a & 0xFF];
 			return 0xFF;
 		}
 		/* return readhi(a & 0xFF); */
@@ -560,7 +560,7 @@ byte mem_read(int a)
 		if (a >= 0xFF10 && a <= 0xFF3F)
 			return sound_read(a & 0xFF);
 		if ((a & 0xFF80) == 0xFF80)
-			return ram.hi[a & 0xFF];
+			return ram->hi[a & 0xFF];
 		return ioreg_read(a & 0xFF);
 	}
 	return 0xff; /* not reached */

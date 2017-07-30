@@ -48,53 +48,53 @@ F = (F & (FL|FC)) | decflag_table[(r)]; }
 #define DECW(r) ( (r)-- )
 
 #define ADD(n) { \
-W(acc) = (un16)A + (un16)(n); \
+W(acc) = (uint16_t)A + (uint16_t)(n); \
 F = (ZFLAG(LB(acc))) \
 | (FH & ((A ^ (n) ^ LB(acc)) << 1)) \
 | (HB(acc) << 4); \
 A = LB(acc); }
 
 #define ADC(n) { \
-W(acc) = (un16)A + (un16)(n) + (un16)((F&FC)>>4); \
+W(acc) = (uint16_t)A + (uint16_t)(n) + (uint16_t)((F&FC)>>4); \
 F = (ZFLAG(LB(acc))) \
 | (FH & ((A ^ (n) ^ LB(acc)) << 1)) \
 | (HB(acc) << 4); \
 A = LB(acc); }
 
 #define ADDW(n) { \
-DW(acc) = (un32)HL + (un32)(n); \
+DW(acc) = (uint32_t)HL + (uint32_t)(n); \
 F = (F & (FZ)) \
 | (FH & ((H ^ ((n)>>8) ^ HB(acc)) << 1)) \
 | (acc.b[HI][LO] << 4); \
 HL = W(acc); }
 
 #define ADDSP(n) { \
-DW(acc) = (un32)SP + (un32)(n8)(n); \
+DW(acc) = (uint32_t)SP + (uint32_t)(int8_t)(n); \
 F = (FH & (((SP>>8) ^ ((n)>>8) ^ HB(acc)) << 1)) \
 | (acc.b[HI][LO] << 4); \
 SP = W(acc); }
 
 #define LDHLSP(n) { \
-DW(acc) = (un32)SP + (un32)(n8)(n); \
+DW(acc) = (uint32_t)SP + (uint32_t)(int8_t)(n); \
 F = (FH & (((SP>>8) ^ ((n)>>8) ^ HB(acc)) << 1)) \
 | (acc.b[HI][LO] << 4); \
 HL = W(acc); }
 
 #define CP(n) { \
-W(acc) = (un16)A - (un16)(n); \
+W(acc) = (uint16_t)A - (uint16_t)(n); \
 F = FN \
 | (ZFLAG(LB(acc))) \
 | (FH & ((A ^ (n) ^ LB(acc)) << 1)) \
-| ((un8)(-(n8)HB(acc)) << 4); }
+| ((uint8_t)(-(int8_t)HB(acc)) << 4); }
 
 #define SUB(n) { CP((n)); A = LB(acc); }
 
 #define SBC(n) { \
-W(acc) = (un16)A - (un16)(n) - (un16)((F&FC)>>4); \
+W(acc) = (uint16_t)A - (uint16_t)(n) - (uint16_t)((F&FC)>>4); \
 F = FN \
-| (ZFLAG((n8)LB(acc))) \
+| (ZFLAG((int8_t)LB(acc))) \
 | (FH & ((A ^ (n) ^ LB(acc)) << 1)) \
-| ((un8)(-(n8)HB(acc)) << 4); \
+| ((uint8_t)(-(int8_t)HB(acc)) << 4); \
 A = LB(acc); }
 
 #define AND(n) { A &= (n); \
@@ -134,7 +134,7 @@ F = ZFLAG((r)) | LB(acc); }
 
 #define SRA(r) { \
 LB(acc) = (((r)&0x01)<<4); \
-(r) = (un8)(((n8)(r))>>1); \
+(r) = (uint8_t)(((int8_t)(r))>>1); \
 F = ZFLAG((r)) | LB(acc); }
 
 #define SRL(r) { \
@@ -216,7 +216,7 @@ label: op(b); break;
 
 
 
-#define JR ( PC += 1+(n8)readb(PC) )
+#define JR ( PC += 1+(int8_t)readb(PC) )
 #define JP ( PC = readw(PC) )
 
 #define CALL ( PUSH(PC+2), JP )
@@ -353,7 +353,7 @@ int cpu_idle(int max)
 
 #ifndef ASM_CPU_EMULATE
 
-extern int debug_trace;
+//extern int debug_trace;
 
 int cpu_emulate(int cycles)
 {
@@ -362,7 +362,7 @@ int cpu_emulate(int cycles)
 	int clen;
 	static union reg acc;
 	static byte b;
-	static word w;
+	static uint16_t w;
 
 	i = cycles;
 next:
@@ -396,7 +396,7 @@ next:
 	}
 	IME = IMA;
 	
-	if (debug_trace) debug_disassemble(PC, 1);
+	//if (debug_trace) debug_disassemble(PC, 1);
 	op = FETCH;
 	clen = cycles_table[op];
 
