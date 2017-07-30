@@ -1,7 +1,7 @@
-#include "badge.h"
-#include "badge_input.h"
-#include "badge_eink.h"
-#include "badge_eink_fb.h"
+#include "badge/badge.h"
+#include "badge/badge_input.h"
+#include "badge/badge_eink.h"
+#include "badge/badge_eink_fb.h"
 
 void setup()
 {
