@@ -10,6 +10,7 @@
 
 #include <esp_log.h>
 
+#include "badge_pins.h"
 #include "badge_eink_lut.h"
 
 static const char *TAG = "badge_eink_lut";
@@ -224,6 +225,7 @@ badge_eink_lut_generate(const struct badge_eink_lut_entry *list, enum badge_eink
 
 #else
 
+#error "lut not defined, things will be broken"
 int
 badge_eink_lut_generate(const struct badge_eink_lut_entry *list, enum badge_eink_lut_flags flags, uint8_t *lut)
 {

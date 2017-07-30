@@ -1,5 +1,6 @@
 #include <sdkconfig.h>
 
+//#define CONFIG_SHA_BADGE_EINK_DEBUG
 #ifdef CONFIG_SHA_BADGE_EINK_DEBUG
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #endif // CONFIG_SHA_BADGE_EINK_DEBUG
