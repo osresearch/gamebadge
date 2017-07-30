@@ -5,6 +5,11 @@
 #include <stdint.h>
 #include <esp_err.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * Initialize the nvs driver.
  * @return ESP_OK on success; any other value indicates an error
@@ -58,5 +63,10 @@ extern esp_err_t badge_nvs_get_str(const char* namespace, const char* key, char 
  * @return ESP_OK on success; any other value indicates an error
  */
 extern esp_err_t badge_nvs_set_str(const char* namespace, const char* key, const char *value);
+
+#ifdef __cplusplus
+};
+#endif
+
 
 #endif // BADGE_NVS_H

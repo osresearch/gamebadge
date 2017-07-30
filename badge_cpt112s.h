@@ -4,6 +4,11 @@
 
 #include <esp_err.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /** callback handler for cpt112s events */
 typedef void (*badge_cpt112s_event_t)(int event);
 
@@ -14,5 +19,10 @@ extern esp_err_t badge_cpt112s_init(void);
 
 /** set the cpt112s-event callback method */
 extern void badge_cpt112s_set_event_handler(badge_cpt112s_event_t handler);
+
+#ifdef __cplusplus
+};
+#endif
+
 
 #endif // BADGE_CPT112S_H

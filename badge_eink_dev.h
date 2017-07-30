@@ -11,6 +11,10 @@
 #define DISP_SIZE_Y 296
 #define DISP_SIZE_X_B ((DISP_SIZE_X + 7) >> 3)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Initialize the SPI bus to the eink display.
  * @return ESP_OK on success; any other value indicates an error
  */
@@ -91,5 +95,9 @@ static inline void badge_eink_dev_write_command_stream_u32(uint8_t command, cons
 	}
 	badge_eink_dev_write_command_end();
 }
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif // BADGE_EINK_DEV_H

@@ -9,6 +9,10 @@
 
 #define BADGE_EINK_FB_LEN (BADGE_EINK_WIDTH * BADGE_EINK_HEIGHT)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** A one byte per pixel frame-buffer */
 extern uint8_t *badge_eink_fb;
 
@@ -17,5 +21,9 @@ extern uint8_t *badge_eink_fb;
  * @return ESP_OK on success; any other value indicates an error
  */
 extern esp_err_t badge_eink_fb_init(void);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif // BADGE_EINK_FB_H

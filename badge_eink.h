@@ -11,6 +11,10 @@
 /** the height of the eink display */
 #define BADGE_EINK_HEIGHT 128
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Initialize the eink display
  * @return ESP_OK on success; any other value indicates an error
  */
@@ -88,5 +92,9 @@ extern void badge_eink_set_ram_pointer(uint8_t x_addr, uint16_t y_addr);
 
 extern void badge_eink_deep_sleep(void);
 extern void badge_eink_wakeup(void);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif // BADGE_EINK_H

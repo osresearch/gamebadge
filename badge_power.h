@@ -5,6 +5,11 @@
 #include <stdbool.h>
 #include <esp_err.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * initializes the battery and usb power sensing
  * @return ESP_OK on success; any other value indicates an error
@@ -63,5 +68,10 @@ extern esp_err_t badge_power_sdcard_enable(void);
  *   the power will stay on.
  */
 extern esp_err_t badge_power_sdcard_disable(void);
+
+#ifdef __cplusplus
+};
+#endif
+
 
 #endif // BADGE_POWER_H

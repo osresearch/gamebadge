@@ -5,10 +5,19 @@
 #include <stdint.h>
 #include <esp_err.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** configure gpio pin as button
  * @return ESP_OK on success; any other value indicates an error
  */
 extern esp_err_t badge_gpiobutton_add(int gpio_num, uint32_t button_id);
+
+#ifdef __cplusplus
+};
+#endif
+
 
 #endif // BADGE_GPIOBUTTON_H
 
