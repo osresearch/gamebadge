@@ -9,6 +9,8 @@
 #include "emu.h"
 
 
+extern "C" const unsigned char rom_image[];
+
 void setup()
 {
 	Serial.begin(115200);
@@ -47,16 +49,16 @@ void setup()
 	emu_reset();
 
 	// setup the ROM image
-	rom->name[0] = 'G';
-	rom->name[1] = 'B';
-	rom->name[2] = '\0';
-	rom_load((const byte*) "abcdef", 8);
+	Serial.println("loading rom");
+	rom_load(rom_image, 65536);
+	Serial.println("loaded!");
 
 }
 
 
 void loop()
 {
+	Serial.println("starting emulator");
 	emu_run();
 
 	uint32_t button = badge_input_get_event(10);

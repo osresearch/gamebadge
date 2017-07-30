@@ -16,7 +16,6 @@
 #include "rtc.h"
 #include "rc.h"
 #include "lcd.h"
-#include "inflate.h"
 #include "save.h"
 #include "sound.h"
 #include "sys.h"
@@ -109,31 +108,16 @@ static void initmem(void *mem, int size)
 		memset(p, memfill, size);
 }
 
-static byte *inf_buf;
-static int inf_pos, inf_len;
-
-static void inflate_callback(byte b)
-{
-	if (inf_pos >= inf_len)
-	{
-		inf_len += 512;
-		inf_buf = realloc(inf_buf, inf_len);
-		if (!inf_buf) die("out of memory inflating file @ %d bytes\n", inf_pos);
-	}
-	inf_buf[inf_pos++] = b;
-}
-
 static byte *decompress(byte *data, int *len)
 {
 	unsigned long pos = 0;
 	if (data[0] != 0x1f || data[1] != 0x8b)
+	{
+		ets_printf("not compressed\n");
 		return data;
-	inf_buf = 0;
-	inf_pos = inf_len = 0;
-	if (unzip(data, &pos, inflate_callback) < 0)
-		return data;
-	*len = inf_pos;
-	return inf_buf;
+	}
+
+	die("compressed roms not supported\n");
 }
 
 
@@ -156,13 +140,17 @@ int rom_load(const byte * data, int len)
 	mbc.romsize = romsize_table[header[0x0148]];
 	mbc.ramsize = ramsize_table[header[0x0149]];
 
+	ets_printf("ROM name: '%s'\n", rom->name);
+	ets_printf("ROM size: %d\n", mbc.romsize);
+	ets_printf("RAM size: %d\n", mbc.ramsize);
+
 	if (!mbc.romsize) die("unknown ROM size %02X\n", header[0x0148]);
 	if (!mbc.ramsize) die("unknown SRAM size %02X\n", header[0x0149]);
 
 	rlen = 16384 * mbc.romsize;
-	rom->bank = realloc(data, rlen);
-	if (rlen > len) memset(rom->bank[0]+len, 0xff, rlen - len);
-	
+	if (rlen != len)
+		die("ROM len %d != image len %d\n", rlen, len);
+
 	ram->sbank = malloc(8192 * mbc.ramsize);
 
 	initmem(ram->sbank, 8192 * mbc.ramsize);
@@ -192,12 +180,3 @@ rcvar_t loader_exports[] =
 	RCV_INT("memrand", &memrand),
 	RCV_END
 };
-
-
-
-
-
-
-
-
-
