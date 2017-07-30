@@ -4,6 +4,12 @@
 
 #include "sdkconfig.h"
 
+// hardcode configuration for production badges
+#define CONFIG_SHA_BADGE_V3 1
+#define CONFIG_SHA_BADGE_EINK_DEPG0290B1 1
+
+
+
 #ifdef CONFIG_SHA_BADGE_V1
 
 // Badge revision 0.0.2

@@ -11,10 +11,10 @@
 
 #include <esp_log.h>
 
-#include <badge_pins.h>
-#include <badge_i2c.h>
-#include <badge_fxl6408.h>
-#include <badge_cpt112s.h>
+#include "badge_pins.h"
+#include "badge_i2c.h"
+#include "badge_fxl6408.h"
+#include "badge_cpt112s.h"
 
 #ifdef I2C_CPT112S_ADDR
 

@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <esp_heap_caps.h>
 #include <esp_log.h>
 
 #include "badge_pins.h"
@@ -362,12 +361,12 @@ badge_eink_init(void)
 	ESP_LOGD(TAG, "init called");
 
 	// allocate buffers
-	badge_eink_tmpbuf = heap_caps_malloc(DISP_SIZE_X_B * DISP_SIZE_Y, MALLOC_CAP_32BIT);
+	badge_eink_tmpbuf = malloc(DISP_SIZE_X_B * DISP_SIZE_Y);
 	if (badge_eink_tmpbuf == NULL)
 		return ESP_ERR_NO_MEM;
 
 #ifdef CONFIG_SHA_BADGE_EINK_DEPG0290B1
-	badge_eink_oldbuf = heap_caps_malloc(DISP_SIZE_X_B * DISP_SIZE_Y, MALLOC_CAP_32BIT);
+	badge_eink_oldbuf = malloc(DISP_SIZE_X_B * DISP_SIZE_Y);
 	if (badge_eink_oldbuf == NULL)
 		return ESP_ERR_NO_MEM;
 #endif // CONFIG_SHA_BADGE_EINK_DEPG0290B1

@@ -6,7 +6,16 @@ void setup()
 	Serial.setDebugOutput(true);
 	Serial.println("Badge MPR121 Test");
 
-	badge_init();
+	int rc = badge_init();
+	if (rc != ESP_OK)
+	{
+		while(1)
+		{
+			Serial.print(rc);
+			Serial.println(" failed");
+			delay(1000);
+		}
+	}
 }
 
 

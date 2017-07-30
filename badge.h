@@ -5,6 +5,14 @@
 /**
  * Initialize all badge drivers.
  */
-extern void badge_init(void);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern int badge_init(void);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif // BADGE_H
