@@ -41,22 +41,23 @@ void setup()
 
 void loop()
 {
-	uint32_t button = badge_input_get_event(1000);
-	Serial.print(button);
-	Serial.print(" ");
-	Serial.println(badge_input_button_state, HEX);
-
-	Serial.println((uintptr_t) badge_eink_fb, HEX);
+	uint32_t button = badge_input_get_event(10);
+	if (button != 0)
+	{
+		Serial.print(button);
+		Serial.print(" ");
+		Serial.println(badge_input_button_state, HEX);
 
 	for(int x = 0 ; x < BADGE_EINK_WIDTH ; x++)
 	{
 		for(int y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
 		{
-			badge_eink_fb[x + y * BADGE_EINK_WIDTH] = x + y;
+			badge_eink_fb[x + y * BADGE_EINK_WIDTH] = x + y + button;
 		}
 	}
 
 	badge_eink_display(badge_eink_fb, DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2));
+	}
 }
 
 
