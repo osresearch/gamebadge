@@ -14,8 +14,8 @@ struct vissprite
 
 struct scan
 {
-	int bg[64];
-	int wnd[64];
+	uint16_t bg[64];
+	uint16_t wnd[64];
 	byte buf[256];
 	byte pal1[128];
 	uint16_t pal2[64];
@@ -62,7 +62,7 @@ void lcd_begin();
 void lcd_refreshline();
 void pal_write(int i, byte b);
 void pal_write_dmg(int i, int mapnum, byte d);
-void vram_write(int a, byte b);
+void vram_write(addr a, byte b);
 void vram_dirty();
 void pal_dirty();
 void lcd_reset();
