@@ -44,17 +44,11 @@ void emu_init()
 
 void emu_reset()
 {
-ets_printf("%s\n", __func__);
 	hw_reset();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	lcd_reset();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	cpu_reset();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	mbc_reset();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	sound_reset();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 }
 
 
@@ -78,18 +72,11 @@ void emu_run()
 	void *timer = sys_timer();
 	int delay;
 
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	vid_begin();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	lcd_begin();
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	for (;;)
 	{
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
-		ets_printf("step\n");
 		cpu_emulate(2280);
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
-		ets_printf("stepped R_LY=%d\n", R_LY);
 		while (R_LY > 0 && R_LY < 144)
 			emu_step();
 		

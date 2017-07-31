@@ -9,13 +9,8 @@
 
 static byte readb(int a)
 {
-ets_printf("%s: mbc.rmap[%d>>12]\n", __func__, a);
-ets_printf("%s: mbc.rmap=%p\n", __func__, mbc.rmap);
-ets_printf("%s: mbc.rmap[0]=%p\n", __func__, mbc.rmap[0]);
 	byte *p = mbc.rmap[a>>12];
-ets_printf("%s: p=%p\n", __func__, p);
 	if (p) {
-ets_printf("p[a]=%p\n", __func__, p[a]);
 		return p[a];
 	}
 

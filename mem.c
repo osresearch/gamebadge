@@ -30,15 +30,12 @@ struct ram * ram;
 
 void mem_updatemap()
 {
-ets_printf("%s\n", __func__);
 	int n;
 	byte **map;
 
 	
 	mbc.rombank &= (mbc.romsize - 1);
 	mbc.rambank &= (mbc.ramsize - 1);
-ets_printf("%s: rom=%p\n", __func__, rom);
-ets_printf("%s: rom->bank[0]=%p rombank=%04x\n", __func__, rom->bank[0], mbc.rombank);
 	
 	map = mbc.rmap;
 	map[0x0] = rom->bank[0];
@@ -47,7 +44,6 @@ ets_printf("%s: rom->bank[0]=%p rombank=%04x\n", __func__, rom->bank[0], mbc.rom
 	map[0x3] = rom->bank[0];
 	if (mbc.rombank < mbc.romsize)
 	{
-ets_printf("%s:%d\n", __func__, __LINE__);
 		map[0x4] = rom->bank[mbc.rombank] - 0x4000;
 		map[0x5] = rom->bank[mbc.rombank] - 0x4000;
 		map[0x6] = rom->bank[mbc.rombank] - 0x4000;
@@ -61,13 +57,11 @@ ets_printf("%s:%d\n", __func__, __LINE__);
 	}
 	else
 	{
-ets_printf("%s:%d\n", __func__, __LINE__);
 		map[0x8] = lcd->vbank[R_VBK & 1] - 0x8000;
 		map[0x9] = lcd->vbank[R_VBK & 1] - 0x8000;
 	}
 	if (mbc.enableram && !(rtc.sel&8))
 	{
-ets_printf("%s:%d\n", __func__, __LINE__);
 		map[0xA] = ram->sbank[mbc.rambank] - 0xA000;
 		map[0xB] = ram->sbank[mbc.rambank] - 0xA000;
 	}
@@ -93,7 +87,6 @@ ets_printf("%s:%d\n", __func__, __LINE__);
 	map[0xD] = ram->ibank[n?n:1] - 0xD000;
 	map[0xE] = ram->ibank[0] - 0xE000;
 	map[0xF] = NULL;
-ets_printf("%s:%d\n", __func__, __LINE__);
 }
 
 
@@ -530,13 +523,10 @@ byte mem_read(int a)
 	int n;
 	byte ha = (a>>12) & 0xE;
 	
-ets_printf("%s: a=%04x ha=%02x\n", __func__, a, ha);
-
 	switch (ha)
 	{
 	case 0x0:
 	case 0x2:
-ets_printf("%s: rom->bank[0]=%0p\n", __func__, rom->bank[0]);
 		return rom->bank[0][a];
 	case 0x4:
 	case 0x6:
@@ -578,7 +568,6 @@ ets_printf("%s: rom->bank[0]=%0p\n", __func__, rom->bank[0]);
 
 void mbc_reset()
 {
-ets_printf("%s\n", __func__);
 	mbc.rombank = 1;
 	mbc.rambank = 0;
 	mbc.enableram = 0;

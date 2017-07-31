@@ -365,7 +365,6 @@ int cpu_emulate(int cycles)
 	static uint16_t w;
 
 	i = cycles;
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 next:
 	if ((clen = cpu_idle(i)))
 	{
@@ -374,8 +373,6 @@ next:
 		return cycles-i;
 	}
 
-ets_printf("%d: PC=%04x op=%02x\n", cycles, PC, op);
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	if (IME && (IF & IE))
 	{
 		PRE_INT;
@@ -385,36 +382,24 @@ ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 		case 0x09: case 0x0B: case 0x0D: case 0x0F:
 		case 0x11: case 0x13: case 0x15: case 0x17:
 		case 0x19: case 0x1B: case 0x1D: case 0x1F:
-ets_printf("%d\n", __LINE__);
 			THROW_INT(0); break;
 		case 0x02: case 0x06: case 0x0A: case 0x0E:
 		case 0x12: case 0x16: case 0x1A: case 0x1E:
-ets_printf("%d\n", __LINE__);
 			THROW_INT(1); break;
 		case 0x04: case 0x0C: case 0x14: case 0x1C:
-ets_printf("%d\n", __LINE__);
 			THROW_INT(2); break;
 		case 0x08: case 0x18:
-ets_printf("%d\n", __LINE__);
 			THROW_INT(3); break;
 		case 0x10:
-ets_printf("%d\n", __LINE__);
 			THROW_INT(4); break;
 		}
 	}
-ets_printf("%d\n", __LINE__);
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	IME = IMA;
-ets_printf("%d\n", __LINE__);
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	
 	//if (debug_trace) debug_disassemble(PC, 1);
 	op = FETCH;
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
-ets_printf("PC=%04x op=%02x\n", PC, op);
 	clen = cycles_table[op];
 ets_printf("PC=%04x op=%02x\n", PC, op);
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 
 	switch(op)
 	{

@@ -123,7 +123,6 @@ static byte *decompress(byte *data, int *len)
 
 int rom_load(const byte * data, int len)
 {
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	byte c, *header;
 
 	header = data = decompress(data, &len);
@@ -167,7 +166,6 @@ ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	hw.cgb = ((c == 0x80) || (c == 0xc0)) && !forcedmg;
 	hw.gba = (hw.cgb && gbamode);
 
-ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	return 0;
 }
 
