@@ -247,6 +247,7 @@ void ioreg_write(byte r, byte b)
 
 byte ioreg_read(byte r)
 {
+//ets_printf("%s: %02x\n", __func__, r);
 	switch(r)
 	{
 	case RI_SC:
@@ -523,8 +524,8 @@ byte mem_read(addr a)
 {
 	int n;
 	byte ha = (a>>12) & 0xE;
-//ets_printf("%s(%04x) ha=%02x\n", __func__, a, ha);
-	
+//ets_printf("mem_read %04x ha=%02x\n", a, ha);
+
 	switch (ha)
 	{
 	case 0x0:
@@ -575,10 +576,4 @@ void mbc_reset()
 	mbc.enableram = 0;
 	mem_updatemap();
 }
-
-
-
-
-
-
 
