@@ -50,14 +50,14 @@ static const int rtc_table[256] =
 	0
 };
 
-static int batt_table[256] =
+static const int batt_table[256] =
 {
 	0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0,
 	1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0,
 	0
 };
 
-static int romsize_table[256] =
+static const int romsize_table[256] =
 {
 	2, 4, 8, 16, 32, 64, 128, 256, 512,
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -73,7 +73,7 @@ static int romsize_table[256] =
 	/* 0, 0, 72, 80, 96  -- actual values but bad to use these! */
 };
 
-static int ramsize_table[256] =
+static const int ramsize_table[256] =
 {
 	1, 1, 1, 4, 16,
 	4 /* FIXME - what value should this be?! */
@@ -125,6 +125,17 @@ int rom_load(const byte * data, int len)
 {
 	byte c, *header;
 
+	if (!ram)
+		ram = calloc(sizeof *ram, 1);
+	if (!rom)
+		rom = calloc(sizeof *rom, 1);
+
+	if (!ram || !rom)
+		die("ram=%p rom=%p\n", ram, rom);
+
+	ets_printf("%s: ram=%p rom=%p\n", __func__, ram, rom);
+
+
 	header = data = decompress(data, &len);
 	
 	memcpy(rom->name, header+0x0134, 16);
@@ -168,18 +179,3 @@ int rom_load(const byte * data, int len)
 
 	return 0;
 }
-
-
-rcvar_t loader_exports[] =
-{
-	RCV_STRING("savedir", &savedir),
-	RCV_STRING("savename", &savename),
-	RCV_INT("saveslot", &saveslot),
-	RCV_BOOL("forcebatt", &forcebatt),
-	RCV_BOOL("nobatt", &nobatt),
-	RCV_BOOL("forcedmg", &forcedmg),
-	RCV_BOOL("gbamode", &gbamode),
-	RCV_INT("memfill", &memfill),
-	RCV_INT("memrand", &memrand),
-	RCV_END
-};

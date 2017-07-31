@@ -170,18 +170,6 @@ void pad_set(byte k, int st)
 
 void hw_reset()
 {
-	memset(&mbc, 0, sizeof mbc);
-
-	if (!ram)
-		ram = calloc(sizeof *ram, 1);
-	if (!rom)
-		rom = calloc(sizeof *rom, 1);
-
-	if (!ram || !rom)
-		die("ram=%p rom=%p\n", ram, rom);
-
-	ets_printf("%s: ram=%p rom=%p\n", __func__, ram, rom);
-
 	hw.ilines = hw.pad = 0;
 
 	memset(ram->hi, 0, sizeof ram->hi);

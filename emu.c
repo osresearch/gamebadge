@@ -15,20 +15,7 @@
 
 
 static int framelen = 16743;
-static int framecount;
-
-rcvar_t emu_exports[] =
-{
-	RCV_INT("framelen", &framelen),
-	RCV_INT("framecount", &framecount),
-	RCV_END
-};
-
-
-
-
-
-
+static int framecount = 0;
 
 void emu_init()
 {
@@ -72,6 +59,7 @@ void emu_run()
 	void *timer = sys_timer();
 	int delay;
 
+ets_printf("int=%d\n", sizeof(int));
 	vid_begin();
 	lcd_begin();
 	for (;;)

@@ -67,11 +67,6 @@ struct snd snd;
 #define S3 (snd.ch[2])
 #define S4 (snd.ch[3])
 
-rcvar_t sound_exports[] =
-{
-	RCV_END
-};
-
 
 static void s1_freq_d(int d)
 {
@@ -297,8 +292,10 @@ void sound_mix()
 
 byte sound_read(byte r)
 {
+ets_printf("%s: %02x\n", r);
 	sound_mix();
 	/* printf("read %02X: %02X\n", r, REG(r)); */
+ets_printf("%s: after %02x -> %02x\n", r, REG(r));
 	return REG(r);
 }
 
