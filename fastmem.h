@@ -6,68 +6,64 @@
 #include "defs.h"
 #include "mem.h"
 
+#define MEM_DEBUG 0
 
 static byte readb(addr a)
 {
 	byte *p = mbc.rmap[a>>12];
-	if (p) {
-		return p[a];
-	}
+	byte x;
+	if (p)
+		x = p[a];
+	else
+		x = mem_read(a);
 
-	return mem_read(a);
+	if(MEM_DEBUG) ets_printf("readb %04x -> %02x\n", a, x);
+	return x;
 }
 
 static void writeb(addr a, byte b)
 {
 	byte *p = mbc.wmap[a>>12];
-//ets_printf("%s(%04x,%02x) mbc.wmap[%x]=%p \n", __func__, a, b, a>>12, p);
-	if (p) p[a] = b;
-	else mem_write(a, b);
+	if(MEM_DEBUG) ets_printf("writeb %04x <- %02x\n", a, b);
+
+	if (p)
+		p[a] = b;
+	else
+		mem_write(a, b);
 }
 
-static int readw(addr a)
+static uint16_t readw(addr a)
 {
+	uint16_t x;
 	if ((a+1) & 0xfff)
 	{
 		byte *p = mbc.rmap[a>>12];
 		if (p)
 		{
-#ifdef IS_LITTLE_ENDIAN
-#ifndef ALLOW_UNALIGNED_IO
-			if (a&1) return p[a] | (p[a+1]<<8);
-#endif
-			return *(word *)(p+a);
-#else
-			return p[a] | (p[a+1]<<8);
-#endif
+			x = p[a] | ((uint16_t)p[a+1]) << 8;
+		} else {
+			x = mem_read(a) | ((uint16_t) mem_read(a+1)) << 8;
 		}
+	} else {
+		x = mem_read(a) | ((uint16_t) mem_read(a+1)) << 8;
 	}
-	return mem_read(a) | (mem_read(a+1)<<8);
+
+	if(MEM_DEBUG) ets_printf("readw %04x -> %04x\n", a, x);
+	return x;
 }
 
-static void writew(addr a, int w)
+static void writew(addr a, uint16_t w)
 {
+	if(MEM_DEBUG) ets_printf("writew %04x <- %04x\n", a, w);
+
 	if ((a+1) & 0xfff)
 	{
 		byte *p = mbc.wmap[a>>12];
 		if (p)
 		{
-#ifdef IS_LITTLE_ENDIAN
-#ifndef ALLOW_UNALIGNED_IO
-			if (a&1)
-			{
-				p[a] = w;
-				p[a+1] = w >> 8;
-				return;
-			}
-#endif
-			*(word *)(p+a) = w;
-			return;
-#else
 			p[a] = w;
 			p[a+1] = w >> 8;
 			return;
-#endif
 		}
 	}
 	mem_write(a, w);
