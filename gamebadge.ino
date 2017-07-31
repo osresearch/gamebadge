@@ -31,6 +31,7 @@ void setup()
 		}
 	}
 
+/*
 	rc = badge_eink_fb_init();
 	if (rc != ESP_OK)
 	{
@@ -41,29 +42,32 @@ void setup()
 			delay(1000);
 		}
 	}
+*/
 
+	// map the e-ink to the video
+	vid_init();
+
+/*
 	// turn the display all black
 	memset(badge_eink_fb, 0x00, BADGE_EINK_FB_LEN);
 	badge_eink_display(badge_eink_fb, DISPLAY_FLAG_LUT(0));
-
-	// startup the emulator
-	emu_reset();
+*/
 
 	// setup the ROM image
 	Serial.println("loading rom");
 	rom_load(rom_image, 65536);
 	Serial.println("loaded!");
-	mem_updatemap();
 
-	// map the e-ink to the video
-	vid_init();
+	// startup the emulator
+	emu_reset();
+
+	Serial.println("starting emulator");
+	emu_run();
 }
 
 
 void loop()
 {
-	Serial.println("starting emulator");
-	emu_run();
 
 	uint32_t button = badge_input_get_event(10);
 	if (button != 0)
