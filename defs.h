@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 
-#ifdef IS_LITTLE_ENDIAN
+//#ifdef IS_LITTLE_ENDIAN
+#if 1
 #define LO 0
 #define HI 1
 #else
