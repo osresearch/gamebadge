@@ -353,7 +353,7 @@ int cpu_idle(int max)
 
 #ifndef ASM_CPU_EMULATE
 
-//extern int debug_trace;
+extern int debug_trace;
 
 int cpu_emulate(int cycles)
 {
@@ -396,7 +396,7 @@ next:
 	}
 	IME = IMA;
 	
-	//if (debug_trace) debug_disassemble(PC, 1);
+	if (debug_trace) debug_disassemble(PC, 1);
 	op = FETCH;
 	clen = cycles_table[op];
 //ets_printf("PC=%04x op=%02x\n", PC, op);
