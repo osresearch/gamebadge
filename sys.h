@@ -1,7 +1,12 @@
 #ifndef VID_H
 #define VID_H
 
+#include <sys/time.h>
+
 /* stuff implemented by the different sys/ backends */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void vid_begin();
 void vid_end();
@@ -31,8 +36,10 @@ void kb_close();
 
 
 /* FIXME these have different prototype for obsolete ( == M$ ) platforms */
-#include <sys/time.h>
-int sys_elapsed(struct timeval *prev);
+int sys_elapsed(uint32_t *prev);
 void sys_initpath();
 
+#ifdef __cplusplus
+};
+#endif
 #endif

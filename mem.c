@@ -302,7 +302,7 @@ byte ioreg_read(byte r)
  * and a byte value written to the address.
  */
 
-void mbc_write(int a, byte b)
+void mbc_write(addr a, byte b)
 {
 	byte ha = (a>>12);
 
@@ -448,10 +448,11 @@ void mbc_write(int a, byte b)
  * region, it accepts writes to any address.
  */
 
-void mem_write(int a, byte b)
+void mem_write(addr a, byte b)
 {
 	int n;
 	byte ha = (a>>12) & 0xE;
+//ets_printf("%s(%04x,%02x) ha=%02x\n", __func__, a, b, ha);
 	
 	/* printf("write to 0x%04X: 0x%02X\n", a, b); */
 	switch (ha)
@@ -518,10 +519,11 @@ void mem_write(int a, byte b)
  * region.
  */
 
-byte mem_read(int a)
+byte mem_read(addr a)
 {
 	int n;
 	byte ha = (a>>12) & 0xE;
+//ets_printf("%s(%04x) ha=%02x\n", __func__, a, ha);
 	
 	switch (ha)
 	{

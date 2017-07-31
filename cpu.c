@@ -399,7 +399,7 @@ next:
 	//if (debug_trace) debug_disassemble(PC, 1);
 	op = FETCH;
 	clen = cycles_table[op];
-ets_printf("PC=%04x op=%02x\n", PC, op);
+//ets_printf("PC=%04x op=%02x\n", PC, op);
 
 	switch(op)
 	{
@@ -867,15 +867,3 @@ int cpu_step(int max)
 }
 
 #endif /* ASM_CPU_STEP */
-
-
-
-
-
-
-
-
-
-
-
-

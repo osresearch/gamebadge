@@ -7,6 +7,7 @@
 #include "mem.h"
 #include "rtc.h"
 #include "emu.h"
+#include "sys.h"
 
 
 extern "C" const unsigned char rom_image[];
@@ -54,6 +55,8 @@ void setup()
 	Serial.println("loaded!");
 	mem_updatemap();
 
+	// map the e-ink to the video
+	vid_init();
 }
 
 
@@ -90,18 +93,18 @@ void serial_int(int x)
 }
 
 
-extern "C" int sys_elapsed(uint32_t * prev);
-
 int sys_elapsed(uint32_t * prev)
 {
 	uint32_t now = micros();
 	uint32_t delta = now - *prev;
 	*prev = now;
+//ets_printf("elapsed: %d\n", delta);
 	return delta;
 }
 
-extern "C" void sys_sleep(int us);
 void sys_sleep(int us)
 {
-	delayMicroseconds(us);
+//ets_printf("usleep(%d)\n", us);
+	if(us > 0)
+		delayMicroseconds(us);
 }

@@ -76,6 +76,7 @@ void emu_run()
 	lcd_begin();
 	for (;;)
 	{
+		vTaskDelay(1);
 		cpu_emulate(2280);
 		while (R_LY > 0 && R_LY < 144)
 			emu_step();
@@ -86,6 +87,7 @@ void emu_run()
 		if (!pcm_submit())
 		{
 			delay = framelen - sys_elapsed(timer);
+//ets_printf("PC=%04x %d usec left\n", cpu.pc.w[LO], delay);
 			sys_sleep(delay);
 			sys_elapsed(timer);
 		}
