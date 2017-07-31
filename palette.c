@@ -14,6 +14,7 @@ byte pal_getcolor(int c, int r, int g, int b)
 {
 	// average the r/g/b and return that
 	(void) c;
+ets_printf("%s(%d,%d,%d,%d)\n", __func__, c, r, g, b);
 	return (r + g + b) / 3;
 }
 
@@ -26,10 +27,6 @@ void pal_expire()
 {
 }
 
-
-void pal_set332()
-{
-}
 
 #else
 
@@ -160,10 +157,13 @@ void pal_expire()
 		if (pallock[i] && pallock[i] < pl_locked)
 			pallock[i]--;
 }
+#endif
 
 
 void pal_set332()
 {
+	ets_printf("%s: setting 332 color\n", __func__);
+
 	int i, r, g, b;
 	
 	fb.indexed = 0;
@@ -179,6 +179,3 @@ void pal_set332()
 		vid_setpal(i++, (r<<5)|(r<<2)|(r>>1),
 			   (g<<5)|(g<<2)|(g>>1), (b<<6)|(b<<4)|(b<<2)|b);
 }
-
-#endif
-
