@@ -48,7 +48,9 @@ byte anydirty;
 
 static byte * patpix(int i, int j, int k)
 {
-	return _patpix + k + 8 * j + 4096 * 8 * i;
+ets_printf("%s: %d,%d,%d\n", __func__, i, j, k);
+	//return _patpix + k + 8 * j + 4096 * 8 * i;
+	return patdirty;
 }
 
 static int scale = 1;
@@ -854,17 +856,31 @@ void pal_dirty()
 
 void lcd_reset()
 {
+ets_printf("%s\n", __func__);
+ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	if(!_patpix)
-		_patpix = malloc(4096*8*8);
+	{
+		//_patpix = malloc(4096*8*8);
+		//if (!_patpix) die("patpix failed\n");
+	}
 	if (!lcd)
+	{
 		lcd = malloc(sizeof *lcd);
+		if (!lcd) die("lcd failed\n");
+	}
 	if (!scan)
+	{
 		scan = malloc(sizeof *scan);
+		if (!scan) die("scan failed\n");
+	}
 
 	memset(lcd, 0, sizeof *lcd);
 	memset(scan, 0, sizeof *scan);
 
+ets_printf("%s: lcd=%p scan=%p patpix=%p\n", __func__, lcd, scan, _patpix);
+
 	lcd_begin();
 	vram_dirty();
 	pal_dirty();
+ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 }

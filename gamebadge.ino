@@ -52,6 +52,7 @@ void setup()
 	Serial.println("loading rom");
 	rom_load(rom_image, 65536);
 	Serial.println("loaded!");
+	mem_updatemap();
 
 }
 

@@ -170,12 +170,17 @@ void pad_set(byte k, int st)
 
 void hw_reset()
 {
+	memset(&mbc, 0, sizeof mbc);
+
 	if (!ram)
 		ram = calloc(sizeof *ram, 1);
 	if (!rom)
 		rom = calloc(sizeof *rom, 1);
 
-	ets_printf("ram=%p rom=%p\n", ram, rom);
+	if (!ram || !rom)
+		die("ram=%p rom=%p\n", ram, rom);
+
+	ets_printf("%s: ram=%p rom=%p\n", __func__, ram, rom);
 
 	hw.ilines = hw.pad = 0;
 
@@ -190,10 +195,3 @@ void hw_reset()
 	R_HDMA5 = 0xFF;
 	R_VBK = 0xFE;
 }
-
-
-
-
-
-
-

@@ -123,8 +123,8 @@ static byte *decompress(byte *data, int *len)
 
 int rom_load(const byte * data, int len)
 {
+ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	byte c, *header;
-	int rlen;
 
 	header = data = decompress(data, &len);
 	
@@ -147,11 +147,15 @@ int rom_load(const byte * data, int len)
 	if (!mbc.romsize) die("unknown ROM size %02X\n", header[0x0148]);
 	if (!mbc.ramsize) die("unknown SRAM size %02X\n", header[0x0149]);
 
-	rlen = 16384 * mbc.romsize;
+	const int rlen = 16384 * mbc.romsize;
 	if (rlen != len)
 		die("ROM len %d != image len %d\n", rlen, len);
 
+	rom->bank = data;
 	ram->sbank = malloc(8192 * mbc.ramsize);
+	ets_printf("%s: ram->sbank=%p\n", __func__, ram->sbank);
+	if (!ram->sbank)
+		die("RAM allocate %d failed\n", 8192 * mbc.ramsize);
 
 	initmem(ram->sbank, 8192 * mbc.ramsize);
 	initmem(ram->ibank, 4096 * 8);
@@ -163,6 +167,7 @@ int rom_load(const byte * data, int len)
 	hw.cgb = ((c == 0x80) || (c == 0xc0)) && !forcedmg;
 	hw.gba = (hw.cgb && gbamode);
 
+ets_printf("%s: rmap=%p\n", __func__, mbc.rmap[0]);
 	return 0;
 }
 

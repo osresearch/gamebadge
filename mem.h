@@ -5,6 +5,9 @@
 
 #include "defs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 #define MBC_NONE 0
@@ -72,9 +75,8 @@ void mbc_reset();
 #define WRITEW(a, w) ( WRITEB((a), (w)&0xFF), WRITEB((a)+1, (w)>>8) )
 
 
-
-
+#ifdef __cplusplus
+};
 #endif
 
-
-
+#endif

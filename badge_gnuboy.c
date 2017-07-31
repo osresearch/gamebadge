@@ -17,12 +17,14 @@ struct pcm pcm;
 struct fb fb;
 
 
+/*
 void sound_write(byte r, byte b){}
 byte sound_read(byte r){ return 0; }
 void sound_dirty() {}
 void sound_off() {}
 void sound_reset() {}
 void sound_mix() {}
+*/
 
 // never have any audio to process
 int pcm_submit() { return 0; }
