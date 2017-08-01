@@ -73,10 +73,10 @@ void doevents()
 #define GB_WIDTH 160
 #define GB_HEIGHT 144
 
-//#define CONFIG_MONO
+#undef CONFIG_MONO
 
 static uint8_t * fb_ram;
-static uint8_t * fb_mono;
+static uint32_t * fb_mono;
 static SemaphoreHandle_t fb_mutex;
 
 void fb_draw_task(void * arg)
@@ -109,7 +109,22 @@ void fb_draw_task(void * arg)
 		//badge_eink_write_bitplane(fb_mono, 0, GB_WIDTH);
 		badge_eink_update(&eink_upd);
 #else
-		badge_eink_display(
+		// try to make a single bit plane
+		for(unsigned y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
+		{
+			for(unsigned x = 0 ; x < BADGE_EINK_WIDTH ; x++)
+			{
+				uint8_t p = fb_ram[x + y * BADGE_EINK_WIDTH];
+				fb_ram[x + y * BADGE_EINK_WIDTH] = p > 0x80 ? 0xFF : 0;
+			}
+		}
+
+		// black it every few frames
+		static unsigned refresh_count;
+		if ((refresh_count++ & 0x3F) == 0)
+			badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
+
+		badge_eink_display_one_layer(
 			fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
 			DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2)
 		);
@@ -169,6 +184,7 @@ void vid_init()
 	// start with black.
 	badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
 
+#ifndef CONFIG_MONO
 	// setup our redraw task
 	fb_mutex = xSemaphoreCreateMutex();
 	xSemaphoreTake(fb_mutex, 0);
@@ -180,7 +196,7 @@ void vid_init()
 	xReturned = xTaskCreate(
 		fb_draw_task,       /* Function that implements the task. */
 		"eink",          /* Text name for the task. */
-		32000,      /* Stack size in words, not bytes. */
+		8192,      /* Stack size in words, not bytes. */
 		NULL,    /* Parameter passed into the task. */
 		tskIDLE_PRIORITY,/* Priority at which the task is created. */
 		&xHandle      /* Used to pass out the created task's handle. */
@@ -188,6 +204,7 @@ void vid_init()
 
 	if (!xReturned)
 		die("unable to create fb thread\n");
+#endif
 
 }
 
@@ -227,21 +244,42 @@ void vid_end()
 
 	// pack the fb into a single bit per pixel
 #ifdef CONFIG_MONO
+	badge_eink_display(
+		fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
+		DISPLAY_FLAG_LUT(2)
+	);
+/*
 	for(unsigned y = 0 ; y < GB_HEIGHT ; y++)
 	{
-		for(unsigned x = 0 ; x < GB_WIDTH ; x += 8)
+		for(unsigned x = 0 ; x < GB_WIDTH ; x += 32)
 		{
-			uint8_t b = 0;
-			for(unsigned xp = 0 ; xp < 8 ; xp++)
+			uint32_t b = 0;
+			for(unsigned xp = 0 ; xp < 32 ; xp++)
 			{
 				uint8_t p = fb_ram[x + xp + y * GB_WIDTH];
 				if (p > 0x40)
-					b = (b << 1) | 1;
+					b |= 0x80000000;
+				b >>= 1;
 			}
-			fb_mono[(x + y * BADGE_EINK_WIDTH)/8] = b;
+			//fb_mono[(x + y * BADGE_EINK_WIDTH)/8] = b;
+			fb_mono[(x + y * GB_WIDTH)/32] = b;
 		}
 	}
-#endif
+
+	//badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
+
+		struct badge_eink_update eink_upd = {
+			.lut = BADGE_EINK_LUT_DEFAULT,
+			.lut_flags = LUT_FLAG_PARTIAL,
+			.reg_0x3a = 26, // dummy lines per gate?
+			.reg_0x3b = 0x08, // 62 usec
+			.y_start = 0,
+			.y_end = GB_WIDTH,
+		};
+		badge_eink_write_bitplane(fb_mono, 0, GB_WIDTH);
+		badge_eink_update(&eink_upd);
+*/
+#else
 
 /*
 	// skip the first few lines and center on the display
@@ -256,5 +294,6 @@ void vid_end()
 	// mark that the fb is in use and wake the drawing task
 	fb.enabled = 0;
 	xSemaphoreGive(fb_mutex);
+#endif
 }
 
