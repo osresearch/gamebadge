@@ -83,6 +83,8 @@ extern void badge_eink_display_one_layer(const uint8_t *img, int flags);
  */
 extern void badge_eink_display(const uint8_t *img, int mode);
 
+extern void
+badge_eink_display_greyscale(const uint8_t *img, int flags, int layers);
 
 /* And some more low-level methods; only use them if you know what you're doing. :-) */
 
@@ -94,6 +96,10 @@ extern void badge_eink_write_bitplane(const uint32_t *buf, int y_start, int y_en
 
 extern void badge_eink_deep_sleep(void);
 extern void badge_eink_wakeup(void);
+
+extern void
+badge_eink_create_bitplane(const uint8_t *img, uint32_t *buf, int bit, int flags);
+extern uint32_t *badge_eink_tmpbuf;
 
 #ifdef __cplusplus
 };

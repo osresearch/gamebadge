@@ -39,7 +39,7 @@ static const uint8_t xlat_curve[256] = {
     0xf5,0xf8,0xfb,0xfe,
 };
 
-static uint32_t *badge_eink_tmpbuf = NULL;
+uint32_t *badge_eink_tmpbuf = NULL;
 #ifdef CONFIG_SHA_BADGE_EINK_DEPG0290B1
 static uint32_t *badge_eink_oldbuf = NULL;
 #endif // CONFIG_SHA_BADGE_EINK_DEPG0290B1
@@ -63,7 +63,7 @@ memset_u32(uint32_t *dst, uint32_t value, size_t size)
 	}
 }
 
-static void
+void
 badge_eink_create_bitplane(const uint8_t *img, uint32_t *buf, int bit, int flags)
 {
 #ifdef EPD_ROTATED_180
@@ -319,6 +319,79 @@ badge_eink_display(const uint8_t *img, int flags)
 }
 
 void
+badge_eink_display_greyscale(const uint8_t *img, int flags, int layers)
+{
+	// start with black.
+	badge_eink_display_one_layer(NULL, (flags | DISPLAY_FLAG_FULL_UPDATE) & ~DISPLAY_FLAG_GREYSCALE);
+
+	// the max. number of layers. more layers will result in more ghosting
+#ifdef CONFIG_SHA_BADGE_EINK_DEPG0290B1
+	if (layers > 5) {
+		layers = 5;
+	}
+	int p_ini = 2;
+#else
+	if (badge_eink_dev_type == BADGE_EINK_GDEH029A1 && layers > 7) {
+		layers = 7;
+	}
+	int p_ini = 8;
+#endif
+
+
+	int layer;
+	for (layer = 0; layer < layers; layer++) {
+		int bit = 128 >> layer;
+		int t = bit >> 1;
+		// gdeh: 64, 32, 16, 8, 4, 2, 1
+		// depg: 64, 32, 16, 8, 4
+
+		int p = p_ini;
+
+		while ((t & 1) == 0 && (p > 1)) {
+			t >>= 1;
+			p >>= 1;
+		}
+
+		int j;
+		for (j = 0; j < p; j++) {
+			int y_start = 0 + j * (DISP_SIZE_Y / p);
+			int y_end = y_start + (DISP_SIZE_Y / p) - 1;
+
+			uint32_t *buf = badge_eink_tmpbuf;
+			badge_eink_create_bitplane(img, buf, bit, DISPLAY_FLAG_GREYSCALE|(flags & DISPLAY_FLAG_ROTATE_180));
+
+			// clear borders
+			memset_u32(buf, 0, y_start * DISP_SIZE_X_B/4);
+			memset_u32(&buf[(y_end+1) * DISP_SIZE_X_B/4], 0, (DISP_SIZE_Y-y_end-1) * DISP_SIZE_X_B/4);
+
+			// LUT:
+			//   Ignore old state;
+			//   Do nothing when bit is not set;
+			//   Make pixel whiter when bit is set;
+			//   Duration is <t> cycles.
+			struct badge_eink_lut_entry lut[] = {
+				{ .length = t, .voltages = 0x88, },
+				{ .length = 0 }
+			};
+
+			/* update display */
+			struct badge_eink_update eink_upd = {
+				.lut        = BADGE_EINK_LUT_CUSTOM,
+				.lut_custom = lut,
+				.reg_0x3a   = 0, // no dummy lines per gate
+				.reg_0x3b   = 0, // 30us per line
+				.y_start    = y_start,
+				.y_end      = y_end + 1,
+			};
+			badge_eink_write_bitplane(buf, 0, DISP_SIZE_Y-1);
+			badge_eink_update(&eink_upd);
+		}
+	}
+
+	badge_eink_have_oldbuf = false;
+}
+
+void
 badge_eink_set_ram_area(uint8_t x_start, uint8_t x_end,
 		uint16_t y_start, uint16_t y_end)
 {
@@ -446,3 +519,4 @@ badge_eink_init(void)
 
 	return ESP_OK;
 }
+

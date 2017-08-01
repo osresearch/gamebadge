@@ -84,6 +84,45 @@ static uint8_t * fb_mono;
 static SemaphoreHandle_t fb_mutex;
 static volatile int done_drawing;
 
+
+static void eink_update(
+	const uint8_t * img,
+	unsigned flags,
+	int y_start,
+	int y_end
+)
+{
+	int lut_mode = 
+		(flags >> DISPLAY_FLAG_LUT_BIT) & ((1 << DISPLAY_FLAG_LUT_SIZE)-1);
+
+	uint32_t *buf = badge_eink_tmpbuf;
+	badge_eink_create_bitplane(img, buf, 0x80, flags);
+
+	int lut_flags = 0;
+
+	// old image not known; do full update
+	// black it every few frames
+	static unsigned refresh_count;
+	if ((refresh_count++ & 0x7F) == 0)
+	{
+		badge_eink_display_one_layer(img, DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_FULL_UPDATE);
+	}
+		lut_flags |= LUT_FLAG_FIRST;
+
+
+	badge_eink_write_bitplane(buf, y_start, y_end);
+
+	struct badge_eink_update eink_upd = {
+		.lut       = lut_mode > 0 ? lut_mode - 1 : BADGE_EINK_LUT_DEFAULT,
+		.lut_flags = lut_flags,
+		.reg_0x3a  = 26,   // 26 dummy lines per gate
+		.reg_0x3b  = 0x08, // 62us per line
+		.y_start   = y_start,
+		.y_end     = y_end,
+	};
+	badge_eink_update(&eink_upd);
+}
+
 void fb_draw_task(void * arg)
 {
 	(void) arg;
@@ -122,18 +161,19 @@ void fb_draw_task(void * arg)
 				uint8_t p = fb_ram[x + y * BADGE_EINK_WIDTH];
 				fb_ram[x + y * BADGE_EINK_WIDTH] = p > THRESHOLD ? 0xFF : 0;
 			}
+
+			// white the background
 			for(unsigned x = GB_WIDTH ; x < BADGE_EINK_WIDTH ; x++)
 				fb_ram[x + y * BADGE_EINK_WIDTH] = 0xFF;
 		}
 
-		// black it every few frames
-		static unsigned refresh_count;
-		if ((refresh_count++ & 0x7F) == 0)
-			badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
-
-		badge_eink_display_one_layer(
-			fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
-			DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2)
+		const int gb_offset = (BADGE_EINK_WIDTH - GB_WIDTH)/2;
+		const uint8_t * center_image = fb_ram + BADGE_EINK_WIDTH - gb_offset;
+		eink_update(
+			center_image,
+			DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2),
+			gb_offset,
+			gb_offset + GB_WIDTH-1
 		);
 #endif
 
