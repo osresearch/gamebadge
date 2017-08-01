@@ -263,9 +263,11 @@ badge_eink_display(const uint8_t *img, int flags)
 		return;
 	}
 
+/*
 	{ // start with black.
 		badge_eink_display_one_layer(NULL, (flags | DISPLAY_FLAG_FULL_UPDATE) & ~DISPLAY_FLAG_GREYSCALE);
 	}
+*/
 
 	int i;
 #ifdef CONFIG_SHA_BADGE_EINK_DEPG0290B1

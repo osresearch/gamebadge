@@ -2,13 +2,12 @@
 #include "rc.h"
 #include "pcm.h"
 #include "fb.h"
+#include "hw.h"
 #include "sys.h"
 #include "badge/badge_eink.h"
 #include "badge/badge_eink_fb.h"
-
-rcvar_t vid_exports[] = { RCV_END };
-rcvar_t joy_exports[] = { RCV_END };
-rcvar_t pcm_exports[] = { RCV_END };
+#include "badge/badge_input.h"
+#include "badge/badge_button.h"
 
 void vid_setpal(int i, int r, int g, int b)
 {
@@ -43,18 +42,55 @@ void * sys_timer()
 
 void doevents()
 {
+	uint32_t button = badge_input_get_event(1);
+	//if (button == 0) return;
+
+	uint32_t buttons = badge_input_button_state;
+	static uint32_t old_buttons;
+	uint32_t delta = buttons ^ old_buttons;
+
+	if (delta == 0)
+		return;
+
+	ets_printf("%d %08x\n", button, buttons, delta);
+
+	if (delta & (BADGE_BUTTON_UP << 1))
+		pad_set(PAD_UP, buttons & BADGE_BUTTON_UP);
+	if (delta & (BADGE_BUTTON_DOWN << 1))
+		pad_set(PAD_DOWN, buttons & BADGE_BUTTON_DOWN);
+	if (delta & (BADGE_BUTTON_LEFT << 1))
+		pad_set(PAD_LEFT, buttons & BADGE_BUTTON_LEFT);
+	if (delta & (BADGE_BUTTON_RIGHT << 1))
+		pad_set(PAD_RIGHT, buttons & BADGE_BUTTON_RIGHT);
+	if (delta & (BADGE_BUTTON_START << 1))
+		pad_set(PAD_START, buttons & BADGE_BUTTON_START);
+	if (delta & (BADGE_BUTTON_SELECT << 1))
+		pad_set(PAD_SELECT, buttons & BADGE_BUTTON_SELECT);
+	if (delta & (BADGE_BUTTON_A << 1))
+		pad_set(PAD_A, buttons & BADGE_BUTTON_A);
+	if (delta & (BADGE_BUTTON_B << 1))
+		pad_set(PAD_B, buttons & BADGE_BUTTON_B);
+
+	old_buttons = badge_input_button_state;
+	pad_refresh();
 }
 
+#define GB_WIDTH 160
+#define GB_HEIGHT 144
 
 static uint8_t * fb_ram;
 
 
 void vid_init()
 {
-	fb_ram = calloc(BADGE_EINK_WIDTH*144, 1);
+	fb_ram = calloc(BADGE_EINK_WIDTH*GB_HEIGHT, 1);
 	if (!fb_ram)
 		die("fb alloc failed\n");
+
 /*
+	fb_mono = calloc(BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT/8, 1);
+	if (!fb_mono)
+		die("mono alloc failed\n");
 	fb.w = BADGE_EINK_WIDTH;
 	fb.h = BADGE_EINK_HEIGHT;
 	fb.pitch = BADGE_EINK_WIDTH;
@@ -77,6 +113,9 @@ void vid_init()
 	fb.cc[2].l = 6;
 	fb.enabled = 1;
 	fb.dirty = 1;
+
+	// start with black.
+	badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
 }
 
 void vid_begin()
@@ -88,16 +127,17 @@ void vid_end()
 {
 	static int framenum;
 	ets_printf("frame %d\n", framenum++);
+
 	// if it is all zero, don't display
 	int non_zero = 0;
-	for(int i = 0 ; i < BADGE_EINK_WIDTH * BADGE_EINK_HEIGHT ; i++)
+	for(int i = 0 ; i < GB_WIDTH * GB_HEIGHT ; i++)
 	{
 		if (fb_ram[i] == 0)
 			continue;
 		non_zero++;
 		break;
 	}
-	if (non_zero == 0 || framenum < 100)
+	if (non_zero == 0 || framenum < 16)
 		return;
 
 	for(int i = 0 ; i < 128 ; i++)
@@ -107,9 +147,29 @@ void vid_end()
 			ets_printf("\n");
 	}
 
+/*
+	// pack the fb into a single bit per pixel
+	for(int y = 0 ; y < GB_HEIGHT ; y++)
+	{
+		for(int x = 0 ; x < GB_WIDTH ; x += 8)
+		{
+			uint8_t b = 0;
+			for(int xp = 0 ; xp < 8 ; xp++)
+			{
+				uint8_t p = fb_ram[x + xp + y * GB_WIDTH];
+				if (p != 0xFF)
+					b = (b << 1) | 1;
+			}
+			fb_mono[(x + y * BADGE_EINK_WIDTH)/8] = b;
+		}
+	}
+*/
+
+	// skip the first few lines and center on the display
 	badge_eink_display(
-		fb_ram,
-		DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2)
+		fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
+		//DISPLAY_FLAG_LUT(3)
+		DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(3)
 	);
 	//ets_printf("end\n");
 }

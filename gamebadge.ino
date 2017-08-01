@@ -56,6 +56,7 @@ void setup()
 	// setup the ROM image
 	Serial.println("loading rom");
 	rom_load(rom_image, 65536);
+	//rom_load(rom_image, 32768);
 	Serial.println("loaded!");
 
 	// startup the emulator
