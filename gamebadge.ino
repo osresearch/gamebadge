@@ -10,7 +10,10 @@
 #include "sys.h"
 
 
-extern "C" const unsigned char rom_image[];
+extern "C" {
+extern const unsigned char rom_image[];
+extern const unsigned int rom_image_size;
+};
 
 void setup()
 {
@@ -55,8 +58,7 @@ void setup()
 
 	// setup the ROM image
 	Serial.println("loading rom");
-	rom_load(rom_image, 65536);
-	//rom_load(rom_image, 32768);
+	rom_load(rom_image, rom_image_size);
 	Serial.println("loaded!");
 
 	// startup the emulator
