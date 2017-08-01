@@ -93,25 +93,6 @@ static const int filter[3][4] = {
 	{  25,  60, 125,  40 }
 };
 
-rcvar_t lcd_exports[] =
-{
-	RCV_INT("scale", &scale),
-	RCV_INT("density", &density),
-	RCV_BOOL("rgb332", &rgb332),
-	RCV_VECTOR("dmg_bgp", dmg_pal[0], 4),
-	RCV_VECTOR("dmg_wndp", dmg_pal[1], 4),
-	RCV_VECTOR("dmg_obp0", dmg_pal[2], 4),
-	RCV_VECTOR("dmg_obp1", dmg_pal[3], 4),
-	RCV_BOOL("sprsort", &sprsort),
-	RCV_BOOL("sprdebug", &sprdebug),
-	RCV_BOOL("colorfilter", &usefilter),
-	RCV_BOOL("filterdmg", &filterdmg),
-	RCV_VECTOR("red", filter[0], 4),
-	RCV_VECTOR("green", filter[1], 4),
-	RCV_VECTOR("blue", filter[2], 4),
-	RCV_END
-};
-
 static byte *vdest;
 
 #ifdef ALLOW_UNALIGNED_IO /* long long is ok since this is i386-only anyway? */
