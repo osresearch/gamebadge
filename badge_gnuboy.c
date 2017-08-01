@@ -9,6 +9,10 @@
 #include "badge/badge_input.h"
 #include "badge/badge_button.h"
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
 void vid_setpal(int i, int r, int g, int b)
 {
 	// should set the pallete; ignore for now
@@ -79,6 +83,30 @@ void doevents()
 #define GB_HEIGHT 144
 
 static uint8_t * fb_ram;
+static SemaphoreHandle_t fb_mutex;
+
+void fb_draw_task(void * arg)
+{
+	(void) arg;
+
+	while(1)
+	{
+		if (!xSemaphoreTake(fb_mutex, 1000))
+		{
+			ets_printf("waiting for frame\n");
+			continue;
+		}
+		
+		// skip the first few lines and center on the display
+		badge_eink_display(
+			fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
+			//DISPLAY_FLAG_LUT(3)
+			DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2)
+		);
+
+		fb.enabled = 1;
+	}
+}
 
 
 void vid_init()
@@ -116,6 +144,24 @@ void vid_init()
 
 	// start with black.
 	badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
+
+	// setup our redraw task
+	fb_mutex = xSemaphoreCreateMutex();
+	xSemaphoreTake(fb_mutex, 0);
+
+	BaseType_t xReturned;
+	TaskHandle_t xHandle = NULL;
+
+	/* Create the task, storing the handle. */
+	xReturned = xTaskCreate(
+		fb_draw_task,       /* Function that implements the task. */
+		"eink",          /* Text name for the task. */
+		8192,      /* Stack size in words, not bytes. */
+		NULL,    /* Parameter passed into the task. */
+		tskIDLE_PRIORITY,/* Priority at which the task is created. */
+		&xHandle      /* Used to pass out the created task's handle. */
+	);
+
 }
 
 void vid_begin()
@@ -125,8 +171,11 @@ void vid_begin()
 
 void vid_end()
 {
+	if(!fb.enabled)
+		return;
+
 	static int framenum;
-	ets_printf("frame %d\n", framenum++);
+	ets_printf("frame %d enabled=%d\n", framenum++, fb.enabled);
 
 	// if it is all zero, don't display
 	int non_zero = 0;
@@ -140,12 +189,19 @@ void vid_end()
 	if (non_zero == 0 || framenum < 16)
 		return;
 
+/*
 	for(int i = 0 ; i < 128 ; i++)
 	{
 		ets_printf("%02x", fb_ram[i + i * BADGE_EINK_WIDTH]);
 		if (i % 32 == 31)
 			ets_printf("\n");
 	}
+*/
+
+	// mark that the fb is in use and wake the drawing task
+	fb.enabled = 0;
+	xSemaphoreGive(fb_mutex);
+
 
 /*
 	// pack the fb into a single bit per pixel
@@ -165,6 +221,7 @@ void vid_end()
 	}
 */
 
+/*
 	// skip the first few lines and center on the display
 	badge_eink_display(
 		fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
@@ -172,5 +229,6 @@ void vid_end()
 		DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(3)
 	);
 	//ets_printf("end\n");
+*/
 }
 

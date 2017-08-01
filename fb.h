@@ -20,7 +20,7 @@ struct fb
 		int l, r;
 	} cc[4];
 	int yuv;
-	int enabled;
+	volatile int enabled;
 	int dirty;
 };
 
