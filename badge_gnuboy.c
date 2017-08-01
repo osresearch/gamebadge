@@ -49,22 +49,22 @@ void doevents()
 
 	ets_printf("%d %08x\n", button, buttons, delta);
 
-	if (delta & (BADGE_BUTTON_UP << 1))
-		pad_set(PAD_UP, buttons & BADGE_BUTTON_UP);
-	if (delta & (BADGE_BUTTON_DOWN << 1))
-		pad_set(PAD_DOWN, buttons & BADGE_BUTTON_DOWN);
-	if (delta & (BADGE_BUTTON_LEFT << 1))
-		pad_set(PAD_LEFT, buttons & BADGE_BUTTON_LEFT);
-	if (delta & (BADGE_BUTTON_RIGHT << 1))
-		pad_set(PAD_RIGHT, buttons & BADGE_BUTTON_RIGHT);
-	if (delta & (BADGE_BUTTON_START << 1))
-		pad_set(PAD_START, buttons & BADGE_BUTTON_START);
-	if (delta & (BADGE_BUTTON_SELECT << 1))
-		pad_set(PAD_SELECT, buttons & BADGE_BUTTON_SELECT);
-	if (delta & (BADGE_BUTTON_A << 1))
-		pad_set(PAD_A, buttons & BADGE_BUTTON_A);
-	if (delta & (BADGE_BUTTON_B << 1))
-		pad_set(PAD_B, buttons & BADGE_BUTTON_B);
+	if (delta & (1 << BADGE_BUTTON_UP))
+		pad_set(PAD_UP, buttons & (1 << BADGE_BUTTON_UP));
+	if (delta & (1 << BADGE_BUTTON_DOWN))
+		pad_set(PAD_DOWN, buttons & (1 << BADGE_BUTTON_DOWN));
+	if (delta & (1 << BADGE_BUTTON_LEFT))
+		pad_set(PAD_LEFT, buttons & (1 << BADGE_BUTTON_LEFT));
+	if (delta & (1 << BADGE_BUTTON_RIGHT))
+		pad_set(PAD_RIGHT, buttons & (1 << BADGE_BUTTON_RIGHT));
+	if (delta & (1 << BADGE_BUTTON_START))
+		pad_set(PAD_START, buttons & (1 << BADGE_BUTTON_START));
+	if (delta & (1 << BADGE_BUTTON_SELECT))
+		pad_set(PAD_SELECT, buttons & (1 << BADGE_BUTTON_SELECT));
+	if (delta & (1 << BADGE_BUTTON_A))
+		pad_set(PAD_A, buttons & (1 << BADGE_BUTTON_A));
+	if (delta & (1 << BADGE_BUTTON_B))
+		pad_set(PAD_B, buttons & (1 << BADGE_BUTTON_B));
 
 	old_buttons = badge_input_button_state;
 	pad_refresh();
@@ -76,8 +76,9 @@ void doevents()
 #undef CONFIG_MONO
 
 static uint8_t * fb_ram;
-static uint32_t * fb_mono;
+static uint8_t * fb_mono;
 static SemaphoreHandle_t fb_mutex;
+static volatile int done_drawing;
 
 void fb_draw_task(void * arg)
 {
@@ -109,19 +110,21 @@ void fb_draw_task(void * arg)
 		//badge_eink_write_bitplane(fb_mono, 0, GB_WIDTH);
 		badge_eink_update(&eink_upd);
 #else
-		// try to make a single bit plane
+		// copy it into a single-color image
 		for(unsigned y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
 		{
-			for(unsigned x = 0 ; x < BADGE_EINK_WIDTH ; x++)
+			for(unsigned x = 0 ; x < GB_WIDTH ; x++)
 			{
 				uint8_t p = fb_ram[x + y * BADGE_EINK_WIDTH];
-				fb_ram[x + y * BADGE_EINK_WIDTH] = p > 0x80 ? 0xFF : 0;
+				fb_ram[x + y * BADGE_EINK_WIDTH] = p > 0x40 ? 0xFF : 0;
 			}
+			for(unsigned x = GB_WIDTH ; x < BADGE_EINK_WIDTH ; x++)
+				fb_ram[x + y * BADGE_EINK_WIDTH] = 0xFF;
 		}
 
 		// black it every few frames
 		static unsigned refresh_count;
-		if ((refresh_count++ & 0x3F) == 0)
+		if ((refresh_count++ & 0x7F) == 0)
 			badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
 
 		badge_eink_display_one_layer(
@@ -130,25 +133,16 @@ void fb_draw_task(void * arg)
 		);
 #endif
 
-		fb.enabled = 1;
+		done_drawing = 1;
 	}
 }
 
 
 void vid_init()
 {
-#ifdef CONFIG_MONO
-	fb_ram = calloc(GB_WIDTH*GB_HEIGHT, 1);
-	if (!fb_ram)
-		die("fb alloc failed\n");
-	fb_mono = calloc(BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT/8, 1);
-	if (!fb_mono)
-		die("fb mono alloc failed\n");
-#else
 	fb_ram = calloc(BADGE_EINK_WIDTH*GB_HEIGHT, 1);
 	if (!fb_ram)
 		die("fb alloc failed\n");
-#endif
 
 /*
 	fb_mono = calloc(BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT/8, 1);
@@ -160,11 +154,7 @@ void vid_init()
 */
 	fb.w = GB_WIDTH;
 	fb.h = GB_HEIGHT;
-#ifdef CONFIG_MONO
-	fb.pitch = GB_WIDTH;
-#else
 	fb.pitch = BADGE_EINK_WIDTH;
-#endif
 
 	fb.ptr = fb_ram;
 	fb.pelsize = 1;
@@ -184,7 +174,6 @@ void vid_init()
 	// start with black.
 	badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
 
-#ifndef CONFIG_MONO
 	// setup our redraw task
 	fb_mutex = xSemaphoreCreateMutex();
 	xSemaphoreTake(fb_mutex, 0);
@@ -204,8 +193,6 @@ void vid_init()
 
 	if (!xReturned)
 		die("unable to create fb thread\n");
-#endif
-
 }
 
 void vid_begin()
@@ -216,7 +203,11 @@ void vid_begin()
 void vid_end()
 {
 	if(!fb.enabled)
+	{
+		if (done_drawing)
+			fb.enabled = 1;
 		return;
+	}
 
 	static int framenum;
 	ets_printf("frame %d enabled=%d\n", framenum++, fb.enabled);
@@ -242,58 +233,8 @@ void vid_end()
 	}
 */
 
-	// pack the fb into a single bit per pixel
-#ifdef CONFIG_MONO
-	badge_eink_display(
-		fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
-		DISPLAY_FLAG_LUT(2)
-	);
-/*
-	for(unsigned y = 0 ; y < GB_HEIGHT ; y++)
-	{
-		for(unsigned x = 0 ; x < GB_WIDTH ; x += 32)
-		{
-			uint32_t b = 0;
-			for(unsigned xp = 0 ; xp < 32 ; xp++)
-			{
-				uint8_t p = fb_ram[x + xp + y * GB_WIDTH];
-				if (p > 0x40)
-					b |= 0x80000000;
-				b >>= 1;
-			}
-			//fb_mono[(x + y * BADGE_EINK_WIDTH)/8] = b;
-			fb_mono[(x + y * GB_WIDTH)/32] = b;
-		}
-	}
-
-	//badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
-
-		struct badge_eink_update eink_upd = {
-			.lut = BADGE_EINK_LUT_DEFAULT,
-			.lut_flags = LUT_FLAG_PARTIAL,
-			.reg_0x3a = 26, // dummy lines per gate?
-			.reg_0x3b = 0x08, // 62 usec
-			.y_start = 0,
-			.y_end = GB_WIDTH,
-		};
-		badge_eink_write_bitplane(fb_mono, 0, GB_WIDTH);
-		badge_eink_update(&eink_upd);
-*/
-#else
-
-/*
-	// skip the first few lines and center on the display
-	badge_eink_display(
-		fb_ram - (BADGE_EINK_WIDTH - GB_WIDTH)/2,
-		//DISPLAY_FLAG_LUT(3)
-		DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(3)
-	);
-	//ets_printf("end\n");
-*/
-
 	// mark that the fb is in use and wake the drawing task
-	fb.enabled = 0;
+	done_drawing = fb.enabled = 0;
 	xSemaphoreGive(fb_mutex);
-#endif
 }
 
