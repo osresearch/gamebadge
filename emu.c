@@ -59,7 +59,6 @@ void emu_run()
 	void *timer = sys_timer();
 	int delay;
 
-ets_printf("int=%d\n", sizeof(int));
 	vid_begin();
 	lcd_begin();
 	for (;;)

@@ -13,6 +13,10 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+// What is "black" versus "white" on the mono display?
+#define THRESHOLD 0x60
+
+
 void vid_setpal(int i, int r, int g, int b)
 {
 	// should set the pallete; ignore for now
@@ -47,7 +51,7 @@ void doevents()
 	if (delta == 0)
 		return;
 
-	ets_printf("%d %08x\n", button, buttons, delta);
+	//ets_printf("%d %08x\n", button, buttons, delta);
 
 	if (delta & (1 << BADGE_BUTTON_UP))
 		pad_set(PAD_UP, buttons & (1 << BADGE_BUTTON_UP));
@@ -116,7 +120,7 @@ void fb_draw_task(void * arg)
 			for(unsigned x = 0 ; x < GB_WIDTH ; x++)
 			{
 				uint8_t p = fb_ram[x + y * BADGE_EINK_WIDTH];
-				fb_ram[x + y * BADGE_EINK_WIDTH] = p > 0x40 ? 0xFF : 0;
+				fb_ram[x + y * BADGE_EINK_WIDTH] = p > THRESHOLD ? 0xFF : 0;
 			}
 			for(unsigned x = GB_WIDTH ; x < BADGE_EINK_WIDTH ; x++)
 				fb_ram[x + y * BADGE_EINK_WIDTH] = 0xFF;
@@ -210,7 +214,8 @@ void vid_end()
 	}
 
 	static int framenum;
-	ets_printf("frame %d enabled=%d\n", framenum++, fb.enabled);
+	framenum++;
+	//ets_printf("frame %d enabled=%d\n", framenum, fb.enabled);
 
 	// if it is all zero, don't display
 	int non_zero = 0;

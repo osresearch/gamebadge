@@ -111,7 +111,15 @@ int sys_elapsed(uint32_t * prev)
 
 void sys_sleep(int us)
 {
+	if (us < 0)
+		return;
+
 //ets_printf("usleep(%d)\n", us);
-	if(us > 0)
-		delayMicroseconds(us);
+	int start = micros();
+
+	while(micros() - start < us)
+	{
+		doevents();
+		delayMicroseconds(100);
+	}
 }

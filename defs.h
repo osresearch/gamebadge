@@ -14,6 +14,10 @@
 #endif
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef uint8_t byte;
 typedef uint16_t addr; // 16-bit address space for the gameboy
 
@@ -26,7 +30,9 @@ typedef uint16_t addr; // 16-bit address space for the gameboy
 //void die(char *fmt, ...);
 void doevents();
 
-
+#ifdef __cplusplus
+};
+#endif
 
 #endif
 
