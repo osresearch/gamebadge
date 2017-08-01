@@ -89,6 +89,8 @@ extern void badge_eink_display(const uint8_t *img, int mode);
 extern void badge_eink_set_ram_area(uint8_t x_start, uint8_t x_end,
 		uint16_t y_start, uint16_t y_end);
 extern void badge_eink_set_ram_pointer(uint8_t x_addr, uint16_t y_addr);
+extern void badge_eink_write_bitplane(const uint32_t *buf, int y_start, int y_end);
+
 
 extern void badge_eink_deep_sleep(void);
 extern void badge_eink_wakeup(void);

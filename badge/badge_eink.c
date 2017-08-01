@@ -113,7 +113,7 @@ badge_eink_create_bitplane(const uint8_t *img, uint32_t *buf, int bit, int flags
 	}
 }
 
-static void
+void
 badge_eink_write_bitplane(const uint32_t *buf, int y_start, int y_end)
 {
 	badge_eink_set_ram_area(0, DISP_SIZE_X_B - 1, 0, DISP_SIZE_Y - 1);
@@ -162,7 +162,7 @@ badge_eink_update(const struct badge_eink_update *upd_conf)
 		lut_entries = badge_eink_lut_full;
 	}
 
-	uint8_t lut[BADGE_EINK_LUT_MAX_SIZE];
+	static uint8_t lut[BADGE_EINK_LUT_MAX_SIZE];
 	int lut_len = badge_eink_lut_generate(lut_entries, upd_conf->lut_flags, lut);
 	assert( lut_len >= 0 );
 
