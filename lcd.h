@@ -14,8 +14,8 @@ struct vissprite
 
 struct scan
 {
-	uint16_t bg[64];
-	uint16_t wnd[64];
+	int bg[64];
+	int wnd[64];
 	byte buf[256];
 	byte pal1[128];
 	uint16_t pal2[64];
@@ -48,16 +48,16 @@ extern struct lcd * lcd;
 extern struct scan * scan;
 
 void updatepatpix();
-void tilebuf();
-void bg_scan();
-void wnd_scan();
-void bg_scan_pri();
-void wnd_scan_pri();
-void bg_scan_color();
-void wnd_scan_color();
-void spr_count();
-void spr_enum();
-void spr_scan();
+//void tilebuf();
+//void bg_scan();
+//void wnd_scan();
+//void bg_scan_pri();
+//void wnd_scan_pri();
+//void bg_scan_color();
+//void wnd_scan_color();
+//void spr_count();
+//void spr_enum();
+//void spr_scan();
 void lcd_begin();
 void lcd_refreshline();
 void pal_write(int i, byte b);

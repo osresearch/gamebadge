@@ -1,5 +1,6 @@
-#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <stdint.h>
 
 #include "refresh.h"
@@ -9,12 +10,9 @@
 #include "hw.h"
 #include "mem.h"
 #include "lcd.h"
-#include "rc.h"
 #include "fb.h"
-#ifdef USE_ASM
-#include "asm.h"
-#endif
 
+//#include "esp_attr.h"
 
 struct lcd *lcd;
 
@@ -44,38 +42,19 @@ struct scan *scan;
 #define WT (scan->wt)
 #define WV (scan->wv)
 
-byte *_patpix;
-//byte patpix[4096][8][8];
-byte patdirty[384];
-byte anydirty;
 
-static byte * patpix(int i, int j, int k)
-{
-/*
-static int last_tile;
-if (last_tile != i)
-	ets_printf("tile %d\n", i);
-last_tile = i;
-*/
+//Lowering this decreases memory, but increases risk of slowdown.
+#define CACHED_PATPIX_NO 1200
 
-	// remap the tile ranges
-	if (i > 1024*3)
-		i = i - 1024*3;
-	if (i > 1024*2)
-		i = i - 1024*2;
-	if (i > 1024)
-		i = i - 1024*1;
+typedef struct {
+	int16_t pat;
+	byte pix[64];
+} PatcacheEntry;
 
-//if(i >= 1024)
-//ets_printf("%s: %d,%d,%d\n", __func__, i, j, k);
-	// corrupt the pattern pix to keep it small enough to fit
-	//return _patpix + k + 8 * j + 4096 * 8 * i;
-	//return &_patpix[i%1024][j][k];
-	return _patpix + k + 8 * j + 8 * 8 * i;
-}
+static PatcacheEntry patcache[CACHED_PATPIX_NO];
+static PatcacheEntry* patcacheptr[4096];
+static int patcachefill;
 
-static int scale = 1;
-static int density = 0;
 
 static int rgb332;
 
@@ -84,14 +63,15 @@ static int sprdebug;
 
 #define DEF_PAL { 0x98d0e0, 0x68a0b0, 0x60707C, 0x2C3C3C }
 
-static const int dmg_pal[4][4] = { DEF_PAL, DEF_PAL, DEF_PAL, DEF_PAL };
+static int dmg_pal[4][4] = { DEF_PAL, DEF_PAL, DEF_PAL, DEF_PAL };
 
 static int usefilter, filterdmg;
-static const int filter[3][4] = {
+static int filter[3][4] = {
 	{ 195,  25,   0,  35 },
 	{  25, 170,  25,  35 },
 	{  25,  60, 125,  40 }
 };
+
 
 static byte *vdest;
 
@@ -102,65 +82,61 @@ static byte *vdest;
 #endif
 
 
+static void genpatpix(int patno, byte *buf) {
+	int no=patno&1023;
+	int or=patno>>10;
+	int a, j, k, c;
 
-
-#ifndef ASM_UPDATEPATPIX
-/*
- * Notes:
- * There are 384 tiles in memory, with 2-bits per pixel each
- * (stored in a weird strided format).
- * updatepatpix() appears to repack them into a more reasonable format.
- * It stores them at offset 1024 flipped in X,
- * Offset 2048 flipped in Y
- * Offset 3072 flipped in X and Y
- */
-void updatepatpix()
-{
-	int i, j, k;
-	int a, c;
 	byte *vram = lcd->vbank[0];
-	
-	if (!anydirty) return;
-	for (i = 0; i < 384; i++)
-	{
-		if (i == 384) i = 512;
-		if (i == 896) break;
-		if (!patdirty[i]) continue;
-		patdirty[i] = 0;
-		for (j = 0; j < 8; j++)
-		{
-			a = ((i<<4) | (j<<1));
-			for (k = 0; k < 8; k++)
-			{
-				c = vram[a] & (1<<k) ? 1 : 0;
-				c |= vram[a+1] & (1<<k) ? 2 : 0;
-				*patpix(i, j, 7-k) = c;
-			}
-			if(0)for (k = 0; k < 8; k++)
-				*patpix(i+384,j,k) = *patpix(i,j,7-k);
-		}
-		if(0)for (j = 0; j < 8; j++)
-		{
-			for (k = 0; k < 8; k++)
-			{
-				*patpix(i+2048,j,k) = *patpix(i,7-j,k);
-				*patpix(i+3072,j,k) = *patpix(i+1024,7-j,k);
-			}
+
+	for (j = 0; j < 8; j++) {
+		a = ((no<<4) | (j<<1));
+		for (k = 0; k < 8; k++) {
+			c = vram[a] & (1<<k) ? 1 : 0;
+			c |= vram[a+1] & (1<<k) ? 2 : 0;
+			if (or==0) buf[j*8+(7-k)]=c;
+			if (or==1) buf[j*8+k]=c;
+			if (or==2) buf[(7-j)*8+(7-k)]=c;
+			if (or==3) buf[(7-j)*8+k]=c;
 		}
 	}
-	anydirty = 0;
 }
-#endif /* ASM_UPDATEPATPIX */
+
+
+int patcachemiss, patcachehit;
+
+static byte *getpatpix(int pat) {
+	static int pos=0;
+	/* If pat found, return immediately */
+	if (patcacheptr[pat]!=NULL) {
+		patcachehit++;
+		return patcacheptr[pat]->pix;
+	}
+	patcachemiss++;
+	/* Pat not found. Generate. */
+	//ToDo: better way to retire patterns.
+	pos++;
+	if (pos>=CACHED_PATPIX_NO) pos=0;
+
+	if (patcache[pos].pat!=-1) {
+		patcacheptr[patcache[pos].pat]=NULL;
+	}
+
+	genpatpix(pat, patcache[pos].pix);
+	patcache[pos].pat=pat;
+	patcacheptr[pat]=&patcache[pos];
+	return patcache[pos].pix;
+}
 
 
 
-void tilebuf()
+static void tilebuf()
 {
 	int i, cnt;
 	int base;
 	byte *tilemap, *attrmap;
 	int *tilebuf;
-	int *wrap;
+	const int *wrap;
 	static const int wraptable[64] =
 	{
 		0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
@@ -252,7 +228,7 @@ void tilebuf()
 }
 
 
-void bg_scan()
+static void bg_scan()
 {
 	int cnt;
 	byte *src, *dest;
@@ -263,27 +239,24 @@ void bg_scan()
 	tile = BG;
 	dest = BUF;
 	
-	//src = patpix[*(tile++)][V] + U;
-	src = patpix(*(tile++),V+U,0);
+	src = getpatpix(*(tile++))+ (V*8) + U;
 	memcpy(dest, src, 8-U);
 	dest += 8-U;
 	cnt -= 8-U;
 	if (cnt <= 0) return;
 	while (cnt >= 8)
 	{
-		//src = patpix[*(tile++)][V];
-		src = patpix(*(tile++),V,0);
+		src = getpatpix(*(tile++))+(V*8);
 		MEMCPY8(dest, src);
 		dest += 8;
 		cnt -= 8;
 	}
-	//src = patpix[*tile][V];
-	src = patpix(*tile,V,0);
+	src = getpatpix(*tile)+(V*8);
 	while (cnt--)
 		*(dest++) = *(src++);
 }
 
-void wnd_scan()
+static void wnd_scan()
 {
 	int cnt;
 	byte *src, *dest;
@@ -296,13 +269,12 @@ void wnd_scan()
 	
 	while (cnt >= 8)
 	{
-		//src = patpix[*(tile++)][WV];
-		src = patpix(*(tile++),WV,0);
+		src = getpatpix(*(tile++))+(WV*8);
 		MEMCPY8(dest, src);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix(*tile,WV,0);
+	src = getpatpix(*tile)+(WV*8);
 	while (cnt--)
 		*(dest++) = *(src++);
 }
@@ -318,7 +290,7 @@ static int priused(void *attr)
 	return (int)((a[0]|a[1]|a[2]|a[3]|a[4]|a[5]|a[6]|a[7])&0x80808080);
 }
 
-void bg_scan_pri()
+static void bg_scan_pri()
 {
 	int cnt, i;
 	byte *src, *dest;
@@ -348,7 +320,7 @@ void bg_scan_pri()
 	memset(dest, src[i&31]&128, cnt);
 }
 
-void wnd_scan_pri()
+static void wnd_scan_pri()
 {
 	int cnt, i;
 	byte *src, *dest;
@@ -375,7 +347,7 @@ void wnd_scan_pri()
 }
 
 #ifndef ASM_BG_SCAN_COLOR
-void bg_scan_color()
+static void bg_scan_color()
 {
 	int cnt;
 	byte *src, *dest;
@@ -385,22 +357,20 @@ void bg_scan_color()
 	cnt = WX;
 	tile = BG;
 	dest = BUF;
-
 	
-	//src = patpix[*(tile++)][V] + U;
-	src = patpix(*(tile++),V,U);
+	src = getpatpix(*(tile++))+(V*8) + U;
 	blendcpy(dest, src, *(tile++), 8-U);
 	dest += 8-U;
 	cnt -= 8-U;
 	if (cnt <= 0) return;
 	while (cnt >= 8)
 	{
-		src = patpix(*(tile++),V,0);
+		src = getpatpix(*(tile++))+(V*8);
 		blendcpy(dest, src, *(tile++), 8);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix(*(tile++),V,0);
+	src = getpatpix(*(tile++))+(V*8);
 	blendcpy(dest, src, *(tile++), cnt);
 }
 #endif
@@ -415,16 +385,15 @@ void wnd_scan_color()
 	cnt = 160 - WX;
 	tile = WND;
 	dest = BUF + WX;
-
 	
 	while (cnt >= 8)
 	{
-		src = patpix(*(tile++),WV,0);
+		src = getpatpix(*(tile++))+(WV*8);
 		blendcpy(dest, src, *(tile++), 8);
 		dest += 8;
 		cnt -= 8;
 	}
-	src = patpix(*(tile++),WV,0);
+	src = getpatpix(*(tile++))+(WV*8);
 	blendcpy(dest, src, *(tile++), cnt);
 }
 
@@ -433,7 +402,7 @@ static void recolor(byte *buf, byte fill, int cnt)
 	while (cnt--) *(buf++) |= fill;
 }
 
-void spr_count()
+static void spr_count()
 {
 	int i;
 	struct obj *o;
@@ -453,7 +422,7 @@ void spr_count()
 	}
 }
 
-void spr_enum()
+static void spr_enum()
 {
 	int i, j;
 	struct obj *o;
@@ -496,7 +465,7 @@ void spr_enum()
 			}
 			if (o->flags & 0x40) pat ^= 1;
 		}
-		VS[NS].buf = patpix(pat,v,0);
+		VS[NS].buf = getpatpix(pat)+(v*8);
 		if (++NS == 10) break;
 	}
 	if (!sprsort || hw.cgb) return;
@@ -519,13 +488,13 @@ void spr_enum()
 	memcpy(VS, ts, sizeof VS);
 }
 
-void spr_scan()
+static void spr_scan()
 {
 	int i, x;
 	byte pal, b, ns = NS;
 	byte *src, *dest, *bg, *pri;
 	struct vissprite *vs;
-	byte bgdup[256];
+	static byte bgdup[256];
 
 	if (!ns) return;
 
@@ -584,34 +553,19 @@ void spr_scan()
 
 void lcd_begin()
 {
-	if (fb.indexed)
-	{
-		if (rgb332) pal_set332();
-		else pal_expire();
-	}
-	while (scale * 160 > fb.w || scale * 144 > fb.h) scale--;
-	vdest = fb.ptr + ((fb.w*fb.pelsize)>>1)
-		- (80*fb.pelsize) * scale
-		+ ((fb.h>>1) - 72*scale) * fb.pitch;
+	vdest = fb.ptr + ((fb.w*fb.pelsize)>>1) - (80*fb.pelsize) + ((fb.h>>1) - 72) * fb.pitch;
 	WY = R_WY;
-
-static int once;
-if(once++ == 0)
-	ets_printf("%s: scale=%d w=%d h=%d ptr=%p vdest=%p WY=%d\n", __func__, scale, fb.w, fb.h, fb.ptr, vdest, WY);
 }
 
 void lcd_refreshline()
 {
 	int i;
-	//byte scalebuf[160*4*4];
 	byte *dest;
 	
 	if (!fb.enabled) return;
 	
 	if (!(R_LCDC & 0x80))
 		return; /* should not happen... */
-	
-	updatepatpix();
 
 	L = R_LY;
 	X = R_SCX;
@@ -650,100 +604,26 @@ void lcd_refreshline()
 
 	if (fb.dirty) memset(fb.ptr, 0, fb.pitch * fb.h);
 	fb.dirty = 0;
-	if (density > scale) density = scale;
-	if (scale == 1) density = 1;
 
-	//dest = (density != 1) ? scalebuf : vdest;
 	dest = vdest;
 	
-	switch (scale)
+	switch (fb.pelsize)
 	{
-	case 0:
 	case 1:
-		switch (fb.pelsize)
-		{
-		case 1:
-			refresh_1(dest, BUF, PAL1, 160);
-			break;
-		case 2:
-			refresh_2(dest, BUF, PAL2, 160);
-			break;
-		case 3:
-			refresh_3(dest, BUF, PAL4, 160);
-			break;
-		case 4:
-			refresh_4(dest, BUF, PAL4, 160);
-			break;
-		}
+		refresh_1((byte*)dest, BUF, PAL1, 160);
 		break;
 	case 2:
-		switch (fb.pelsize)
-		{
-		case 1:
-			refresh_2(dest, BUF, PAL2, 160);
-			break;
-		case 2:
-			refresh_4(dest, BUF, PAL4, 160);
-			break;
-		case 3:
-			refresh_3_2x(dest, BUF, PAL4, 160);
-			break;
-		case 4:
-			refresh_4_2x(dest, BUF, PAL4, 160);
-			break;
-		}
+		refresh_2((uint16_t*)dest, BUF, PAL2, 160);
 		break;
 	case 3:
-		switch (fb.pelsize)
-		{
-		case 1:
-			refresh_3(dest, BUF, PAL4, 160);
-			break;
-		case 2:
-			refresh_2_3x(dest, BUF, PAL2, 160);
-			break;
-		case 3:
-			refresh_3_3x(dest, BUF, PAL4, 160);
-			break;
-		case 4:
-			refresh_4_3x(dest, BUF, PAL4, 160);
-			break;
-		}
+		refresh_3((byte*)dest, BUF, PAL4, 160);
 		break;
 	case 4:
-		switch (fb.pelsize)
-		{
-		case 1:
-			refresh_4(dest, BUF, PAL4, 160);
-			break;
-		case 2:
-			refresh_4_2x(dest, BUF, PAL4, 160);
-			break;
-		case 3:
-			refresh_3_4x(dest, BUF, PAL4, 160);
-			break;
-		case 4:
-			refresh_4_4x(dest, BUF, PAL4, 160);
-			break;
-		}
-		break;
-	default:
+		refresh_4((uint32_t*)dest, BUF, PAL4, 160);
 		break;
 	}
 
-/*
-	if (density != 1)
-	{
-		for (i = 0; i < scale; i++)
-		{
-			if ((i < density) || ((density <= 0) && !(i&1)))
-				memcpy(vdest, scalebuf, 160 * fb.pelsize * scale);
-			vdest += fb.pitch;
-		}
-	}
-	else
-*/
-		vdest += fb.pitch * scale;
+	vdest += fb.pitch;
 }
 
 
@@ -763,10 +643,6 @@ static void updatepalette(int i)
 	r |= (r >> 5);
 	g |= (g >> 5);
 	b |= (b >> 5);
-
-
-ets_printf("%s %d usefilter=%d %d,%d,%d\n", __func__, i, usefilter, r, g, b);
-
 
 	if (usefilter && (filterdmg || hw.cgb))
 	{
@@ -790,15 +666,6 @@ ets_printf("%s %d usefilter=%d %d,%d,%d\n", __func__, i, usefilter, r, g, b);
 		return;
 	}
 	
-	if (fb.indexed)
-	{
-		pal_release(PAL1[i]);
-		c = pal_getcolor(c, r, g, b);
-		PAL1[i] = c;
-		PAL2[i] = (c<<8) | c;
-		PAL4[i] = (c<<24) | (c<<16) | (c<<8) | c;
-		return;
-	}
 
 	r = (r >> fb.cc[0].r) << fb.cc[0].l;
 	g = (g >> fb.cc[1].r) << fb.cc[1].l;
@@ -833,7 +700,7 @@ void pal_write(int i, byte b)
 void pal_write_dmg(int i, int mapnum, byte d)
 {
 	int j;
-	const int * const cmap = dmg_pal[mapnum];
+	int *cmap = dmg_pal[mapnum];
 	int c, r, g, b;
 
 	if (hw.cgb) return;
@@ -854,19 +721,26 @@ void pal_write_dmg(int i, int mapnum, byte d)
 
 void vram_write(addr a, byte b)
 {
-	uint16_t tile =((R_VBK&1)<<9)+(a>>4);
-//ets_printf("%s: a=%04x b=%02x tile=%d\n", __func__, a, b, tile);
+	int n, i;
 	lcd->vbank[R_VBK&1][a] = b;
 	if (a >= 0x1800) return;
-	if (tile < 384)
-		patdirty[tile] = 1;
-	anydirty = 1;
+	n=(((R_VBK&1)<<9)+(a>>4));
+	for (i=0; i<4; i++) {
+		if (patcacheptr[n+1024*i]!=NULL) {
+			patcacheptr[n+1024*i]->pat=-1;
+			patcacheptr[n+1024*i]=NULL;
+		}
+	}
 }
 
-void vram_dirty()
-{
-	anydirty = 1;
-	memset(patdirty, 1, sizeof patdirty);
+void vram_dirty() {
+	int i;
+	for (i=0; i<CACHED_PATPIX_NO; i++) {
+		patcache[i].pat=-1;
+	}
+	for (i=0; i<4096; i++) {
+		patcacheptr[i]=NULL;
+	}
 }
 
 void pal_dirty()
@@ -879,29 +753,38 @@ void pal_dirty()
 		pal_write_dmg(64, 2, R_OBP0);
 		pal_write_dmg(72, 3, R_OBP1);
 	}
-	for (i = 0; i < 64; i++)
+	for (i = 0; i < 64; i++) {
 		updatepalette(i);
+	}
 }
 
 void lcd_reset()
 {
-ets_printf("%s\n", __func__);
-	if(!_patpix)
-	{
-		//_patpix = malloc(4096*8*8);
-		_patpix = calloc(384*1*8*8, 1);
-		if (!_patpix) die("patpix failed\n");
-	}
-
 #if 1
-	lcd = calloc(sizeof *lcd, 1);
-	scan = calloc(sizeof *scan, 1);
+       lcd = calloc(sizeof *lcd, 1);
+       scan = calloc(sizeof *scan, 1);
 
-	if (!lcd || !scan)
-		die("lcd alloc failed: %p %p\n", lcd, scan);
+       if (!lcd || !scan)
+               die("lcd alloc failed: %p %p\n", lcd, scan);
 #endif
 
-	lcd_begin();
 	vram_dirty();
+	lcd_begin();
 	pal_dirty();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
