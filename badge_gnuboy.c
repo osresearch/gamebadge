@@ -77,10 +77,8 @@ void doevents()
 #define GB_WIDTH 160
 #define GB_HEIGHT 144
 
-#undef CONFIG_MONO
 
 static uint8_t * fb_ram;
-static uint8_t * fb_mono;
 static SemaphoreHandle_t fb_mutex;
 static volatile int done_drawing;
 
@@ -92,25 +90,25 @@ static void eink_update(
 	int y_end
 )
 {
+#if 1
 	int lut_mode = 
 		(flags >> DISPLAY_FLAG_LUT_BIT) & ((1 << DISPLAY_FLAG_LUT_SIZE)-1);
 
-	uint32_t *buf = badge_eink_tmpbuf;
-	badge_eink_create_bitplane(img, buf, 0x80, flags);
-
 	int lut_flags = 0;
+
+	uint32_t * buf = badge_eink_tmpbuf;
+	badge_eink_create_bitplane(img, buf, 0x80, flags);
 
 	// old image not known; do full update
 	// black it every few frames
 	static unsigned refresh_count;
 	if ((refresh_count++ & 0x7F) == 0)
 	{
-		badge_eink_display_one_layer(img, DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_FULL_UPDATE);
+		badge_eink_display(img, DISPLAY_FLAG_8BITPIXEL | DISPLAY_FLAG_FULL_UPDATE);
+		return;
 	}
-		lut_flags |= LUT_FLAG_FIRST;
 
-
-	badge_eink_write_bitplane(buf, y_start, y_end);
+	lut_flags |= LUT_FLAG_PARTIAL;
 
 	struct badge_eink_update eink_upd = {
 		.lut       = lut_mode > 0 ? lut_mode - 1 : BADGE_EINK_LUT_DEFAULT,
@@ -120,12 +118,23 @@ static void eink_update(
 		.y_start   = y_start,
 		.y_end     = y_end,
 	};
-	badge_eink_update(&eink_upd);
+
+	badge_eink_update(buf, &eink_upd);
+#else
+	// black it every few frames
+	static unsigned refresh_count;
+	if ((refresh_count++ & 0x7F) == 0)
+		badge_eink_display(NULL, DISPLAY_FLAG_FULL_UPDATE);
+
+	badge_eink_display_greyscale(img, flags, 8);
+#endif
 }
 
 void fb_draw_task(void * arg)
 {
 	(void) arg;
+	unsigned start = sys_micros();
+	unsigned count = 0;
 
 	while(1)
 	{
@@ -135,49 +144,49 @@ void fb_draw_task(void * arg)
 			continue;
 		}
 
-#ifdef CONFIG_MONO
-/*
-		struct badge_eink_enty_lut lut[] = {
-			{ .length = 64, .voltages = 0x88, },
-			{ .length = 0 },
-		};
-*/
-		struct badge_eink_update eink_upd = {
-			.lut = BADGE_EINK_LUT_DEFAULT,
-			.lut_flags = LUT_FLAG_PARTIAL,
-			.reg_0x3a = 26, // dummy lines per gate?
-			.reg_0x3b = 0x08, // 62 usec
-			.y_start = 0,
-			.y_end = GB_WIDTH,
-		};
-		//badge_eink_write_bitplane(fb_mono, 0, GB_WIDTH);
-		badge_eink_update(&eink_upd);
-#else
-		// copy it into a single-color image
 		for(unsigned y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
 		{
+			// copy it into a single-color image
 			for(unsigned x = 0 ; x < GB_WIDTH ; x++)
 			{
 				uint8_t p = fb_ram[x + y * BADGE_EINK_WIDTH];
 				fb_ram[x + y * BADGE_EINK_WIDTH] = p > THRESHOLD ? 0xFF : 0;
 			}
 
-			// white the background
+			// checkerboard the background;
+			// should we shift it every so often?
 			for(unsigned x = GB_WIDTH ; x < BADGE_EINK_WIDTH ; x++)
-				fb_ram[x + y * BADGE_EINK_WIDTH] = 0xFF;
+			{
+				fb_ram[x + y * BADGE_EINK_WIDTH] = (x^y) & 2 ? 0xFF : 0;
+			}
 		}
 
 		const int gb_offset = (BADGE_EINK_WIDTH - GB_WIDTH)/2;
 		const uint8_t * center_image = fb_ram + BADGE_EINK_WIDTH - gb_offset;
 		eink_update(
 			center_image,
-			DISPLAY_FLAG_GREYSCALE | DISPLAY_FLAG_LUT(2),
+			DISPLAY_FLAG_8BITPIXEL | DISPLAY_FLAG_LUT(2),
 			gb_offset,
 			gb_offset + GB_WIDTH-1
 		);
-#endif
 
 		done_drawing = 1;
+
+		if (++count == 16)
+		{
+			unsigned now = sys_micros();
+			unsigned delta = now - start;
+			ets_printf("%d frames %u us => %d.%02d fps\n",
+				count,
+				delta,
+				((count * 1000000 / delta)),
+				((count * 10000) / delta) % 100
+			);
+			count = 0;
+			start = now;
+		}
+				
+
 	}
 }
 
@@ -188,14 +197,8 @@ void vid_init()
 	if (!fb_ram)
 		die("fb alloc failed\n");
 
-/*
-	fb_mono = calloc(BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT/8, 1);
-	if (!fb_mono)
-		die("mono alloc failed\n");
-	fb.w = BADGE_EINK_WIDTH;
-	fb.h = BADGE_EINK_HEIGHT;
-	fb.pitch = BADGE_EINK_WIDTH;
-*/
+	// use the pitch of the eink display, but the width of
+	// the game boy display.
 	fb.w = GB_WIDTH;
 	fb.h = GB_HEIGHT;
 	fb.pitch = BADGE_EINK_WIDTH;
@@ -216,7 +219,7 @@ void vid_init()
 	fb.dirty = 1;
 
 	// start with black.
-	badge_eink_display_one_layer(NULL, DISPLAY_FLAG_FULL_UPDATE);
+	badge_eink_display(NULL, DISPLAY_FLAG_FULL_UPDATE);
 
 	// setup our redraw task
 	fb_mutex = xSemaphoreCreateMutex();
