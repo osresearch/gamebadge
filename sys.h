@@ -38,7 +38,7 @@ void kb_close();
 /* FIXME these have different prototype for obsolete ( == M$ ) platforms */
 int sys_elapsed(uint32_t *prev);
 void sys_initpath();
-unsigned int sys_micros();
+unsigned long sys_micros();
 
 #ifdef __cplusplus
 };

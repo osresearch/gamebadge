@@ -89,7 +89,7 @@ void serial_int(int x)
 
 int sys_elapsed(uint32_t * prev)
 {
-	uint32_t now = micros();
+	uint32_t now = sys_micros();
 	uint32_t delta = now - *prev;
 	*prev = now;
 //ets_printf("elapsed: %d\n", delta);
@@ -102,16 +102,17 @@ void sys_sleep(int us)
 		return;
 
 //ets_printf("usleep(%d)\n", us);
-	int start = micros();
+	int start = sys_micros();
 
-	while(micros() - start < us)
+	while(sys_micros() - start < us)
 	{
 		doevents();
 		delayMicroseconds(100);
 	}
 }
 
-unsigned int sys_micros()
+unsigned long sys_micros()
 {
+	//return micros() / 50; // wtf?
 	return micros();
 }

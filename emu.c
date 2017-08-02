@@ -10,6 +10,7 @@
 #include "rc.h"
 #include "rtc.h"
 #include "sys.h"
+#include "fb.h"
 #include "sound.h"
 #include "cpu.h"
 
@@ -74,7 +75,7 @@ void emu_run()
 		if (!pcm_submit())
 		{
 			delay = framelen - sys_elapsed(timer);
-//ets_printf("PC=%04x %d usec left\n", cpu.pc.w[LO], delay);
+//ets_printf("PC=%04x %d usec left fb=%d\n", cpu.pc.w[LO], delay, fb.enabled);
 			sys_sleep(delay);
 			sys_elapsed(timer);
 		}
