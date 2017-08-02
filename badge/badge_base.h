@@ -4,9 +4,7 @@
 
 #include <esp_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_DECLS
 
 /**
  * Initialize badge base driver.
@@ -14,9 +12,6 @@ extern "C" {
  */
 extern esp_err_t badge_base_init(void);
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 
 #endif // BADGE_BASE_H

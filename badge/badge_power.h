@@ -5,10 +5,7 @@
 #include <stdbool.h>
 #include <esp_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+__BEGIN_DECLS
 
 /**
  * initializes the battery and usb power sensing
@@ -69,9 +66,6 @@ extern esp_err_t badge_power_sdcard_enable(void);
  */
 extern esp_err_t badge_power_sdcard_disable(void);
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 
 #endif // BADGE_POWER_H

@@ -6,11 +6,6 @@
 
 #define BADGE_EINK_LUT_MAX_SIZE 70
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 struct badge_eink_lut_entry {
 	/** the number of cycles the voltages are held; 0 = end of list */
 	uint8_t length;
@@ -36,6 +31,8 @@ enum badge_eink_lut_flags {
 	LUT_FLAG_BLACK    = 8, // black only
 };
 
+__BEGIN_DECLS
+
 /**
  * Generate LUT data for specific eink display.
  *
@@ -52,9 +49,6 @@ extern const struct badge_eink_lut_entry badge_eink_lut_normal[];
 extern const struct badge_eink_lut_entry badge_eink_lut_faster[];
 extern const struct badge_eink_lut_entry badge_eink_lut_fastest[];
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 
 #endif // BADGE_EINK_LUT_H

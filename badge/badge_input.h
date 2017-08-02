@@ -6,9 +6,7 @@
 #include <stdint.h>
 #include <esp_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_DECLS
 
 /** initialize badge input
  * @return ESP_OK on success; any other value indicates an error
@@ -40,7 +38,6 @@ extern uint32_t badge_input_button_state;
 /** callback method to get notifies on events. */
 extern void (*badge_input_notify)(void);
 
-#ifdef __cplusplus
-};
-#endif
+__END_DECLS
+
 #endif // BADGE_INPUT_H

@@ -7,11 +7,9 @@
 
 #include "badge_eink.h"
 
-#define BADGE_EINK_FB_LEN (BADGE_EINK_WIDTH * BADGE_EINK_HEIGHT)
+__BEGIN_DECLS
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define BADGE_EINK_FB_LEN (BADGE_EINK_WIDTH * BADGE_EINK_HEIGHT)
 
 /** A one byte per pixel frame-buffer */
 extern uint8_t *badge_eink_fb;
@@ -22,8 +20,6 @@ extern uint8_t *badge_eink_fb;
  */
 extern esp_err_t badge_eink_fb_init(void);
 
-#ifdef __cplusplus
-};
-#endif
+__END_DECLS
 
 #endif // BADGE_EINK_FB_H

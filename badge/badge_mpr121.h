@@ -6,10 +6,7 @@
 #include <stdint.h>
 #include <esp_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+__BEGIN_DECLS
 
 /** interrupt handler type */
 typedef void (*badge_mpr121_intr_t)(void*, bool);
@@ -107,9 +104,6 @@ extern int badge_mpr121_get_gpio_level(int pin);
  */
 extern int badge_mpr121_set_gpio_level(int pin, int value);
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 
 #endif // BADGE_MPR121_H

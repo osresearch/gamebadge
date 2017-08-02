@@ -2,17 +2,13 @@
 #ifndef BADGE_H
 #define BADGE_H
 
+__BEGIN_DECLS
+
 /**
  * Initialize all badge drivers.
  */
-#ifdef __cplusplus
-extern "C" {
-#endif
+extern void badge_init(void);
 
-extern int badge_init(void);
-
-#ifdef __cplusplus
-};
-#endif
+__END_DECLS
 
 #endif // BADGE_H

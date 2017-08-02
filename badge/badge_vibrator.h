@@ -5,10 +5,7 @@
 #include <stdint.h>
 #include <esp_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+__BEGIN_DECLS
 
 /**
  * Initialize vibrator driver. (GPIO ports)
@@ -27,9 +24,6 @@ extern esp_err_t badge_vibrator_init(void);
  */
 extern void badge_vibrator_activate(uint32_t pattern);
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 
 #endif // BADGE_VIBRATOR_H

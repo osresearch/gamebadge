@@ -5,10 +5,7 @@
 #include <stdint.h>
 #include <esp_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+__BEGIN_DECLS
 
 /**
  * Initialize the nvs driver.
@@ -64,9 +61,6 @@ extern esp_err_t badge_nvs_get_str(const char* namespace, const char* key, char 
  */
 extern esp_err_t badge_nvs_set_str(const char* namespace, const char* key, const char *value);
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 
 #endif // BADGE_NVS_H

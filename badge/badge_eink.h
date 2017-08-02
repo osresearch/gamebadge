@@ -5,20 +5,21 @@
 #include <stdint.h>
 #include <esp_err.h>
 
+#include "badge_eink_types.h"
+
 /** the width of the eink display */
 #define BADGE_EINK_WIDTH  296
 
 /** the height of the eink display */
-#define BADGE_EINK_HEIGHT 128
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_DECLS
+
+#define BADGE_EINK_HEIGHT 128
 
 /** Initialize the eink display
  * @return ESP_OK on success; any other value indicates an error
  */
-extern esp_err_t badge_eink_init(void);
+extern esp_err_t badge_eink_init(enum badge_eink_dev_t dev_type);
 
 /** badge_eink_update 'lut' settings */
 enum badge_eink_lut
@@ -50,17 +51,15 @@ struct badge_eink_update {
 	int y_end;
 };
 
-/** default config for convenience */
-extern const struct badge_eink_update eink_upd_default;
-
 /** refresh the eink display with given config-settings
+ * @param buf the raw buffer to write to the screen
  * @param upd_conf the config-settings to use
  */
-extern void badge_eink_update(const struct badge_eink_update *upd_conf);
+extern void badge_eink_update(const uint32_t *buf, const struct badge_eink_update *upd_conf);
 
 /* badge_eink_display 'mode' settings */
 // bitmapped flags:
-#define DISPLAY_FLAG_GREYSCALE  1
+#define DISPLAY_FLAG_8BITPIXEL  1
 #define DISPLAY_FLAG_ROTATE_180 2
 #define DISPLAY_FLAG_NO_UPDATE  4
 #define DISPLAY_FLAG_FULL_UPDATE 8
@@ -69,7 +68,6 @@ extern void badge_eink_update(const struct badge_eink_update *upd_conf);
 #define DISPLAY_FLAG_LUT_SIZE   4
 #define DISPLAY_FLAG_LUT(x) ((1+(x)) << DISPLAY_FLAG_LUT_BIT)
 
-extern void badge_eink_display_one_layer(const uint8_t *img, int flags);
 /*
  * display image on badge
  *
@@ -81,28 +79,19 @@ extern void badge_eink_display_one_layer(const uint8_t *img, int flags);
  * - slow/full update
  * - greyscale update
  */
-extern void badge_eink_display(const uint8_t *img, int mode);
+extern void badge_eink_display(const uint8_t *img, int flags);
 
-extern void
-badge_eink_display_greyscale(const uint8_t *img, int flags, int layers);
-
-/* And some more low-level methods; only use them if you know what you're doing. :-) */
-
-extern void badge_eink_set_ram_area(uint8_t x_start, uint8_t x_end,
-		uint16_t y_start, uint16_t y_end);
-extern void badge_eink_set_ram_pointer(uint8_t x_addr, uint16_t y_addr);
-extern void badge_eink_write_bitplane(const uint32_t *buf, int y_start, int y_end);
-
+/*
+ * display image on badge with greyscale hack
+ */
+extern void badge_eink_display_greyscale(const uint8_t *img, int flags, int layers);
 
 extern void badge_eink_deep_sleep(void);
 extern void badge_eink_wakeup(void);
 
+extern uint32_t *badge_eink_tmpbuf;
 extern void
 badge_eink_create_bitplane(const uint8_t *img, uint32_t *buf, int bit, int flags);
-extern uint32_t *badge_eink_tmpbuf;
 
-#ifdef __cplusplus
-};
-#endif
-
+__END_DECLS
 #endif // BADGE_EINK_H
