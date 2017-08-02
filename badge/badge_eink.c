@@ -259,7 +259,7 @@ void
 badge_eink_display_greyscale(const uint8_t *img, int flags, int layers)
 {
 	// start with black.
-	//badge_eink_display(NULL, flags | DISPLAY_FLAG_FULL_UPDATE);
+	badge_eink_display(NULL, flags | DISPLAY_FLAG_FULL_UPDATE);
 
 	// the max. number of layers. more layers will result in more ghosting
 	if (badge_eink_dev_type == BADGE_EINK_DEPG0290B1 && layers > 5) {
