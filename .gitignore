@@ -1,0 +1,5 @@
+.*.swp
+game.c
+*.rom
+tags
+*.bin
