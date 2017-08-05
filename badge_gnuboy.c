@@ -8,6 +8,7 @@
 #include "badge/badge_eink_lut.h"
 #include "badge/badge_input.h"
 #include "badge/badge_button.h"
+#include "badge/badge_leds.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -280,7 +281,7 @@ void vid_end()
 */
 
 	// post process the image
-	for(unsigned y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
+	for(unsigned y = 0 ; y < GB_HEIGHT ; y++)
 	{
 		// copy it into a single-color image
 		for(unsigned x = 0 ; x < GB_WIDTH ; x++)
@@ -299,7 +300,9 @@ void vid_end()
 	}
 
 	// translate it to a monochrome bitmap, centered on the screen
-	const uint8_t * center_image = fb_ram + BADGE_EINK_WIDTH - GB_OFFSET;
+	// skip the top 144-128 lines of the screen so that we see
+	// the bottom row.
+	const uint8_t * center_image = fb_ram + (GB_HEIGHT-BADGE_EINK_HEIGHT) * BADGE_EINK_WIDTH - GB_OFFSET;
 	fb_mono = badge_eink_tmpbuf;
 	badge_eink_create_bitplane(center_image, fb_mono, 0x80, DISPLAY_FLAG_8BITPIXEL);
 
@@ -307,4 +310,98 @@ void vid_end()
 	done_drawing = fb.enabled = 0;
 	xSemaphoreGive(fb_mutex);
 	last_draw = sys_micros();
+
+#define NUM_LEDS 6
+	static uint8_t leds[NUM_LEDS*4];
+
+	memset(leds, 0x01, sizeof(leds));
+	for(int i = 0 ; i < framenum % NUM_LEDS ; i++)
+	{
+		leds[4*i + 0] = 0;
+		leds[4*i + 1] = 20;
+		leds[4*i + 2] = 0;
+		leds[4*i + 3] = 0;
+	}
+
+	//badge_leds_send_data(leds, sizeof(leds));
+}
+
+
+void burnin()
+{
+	fb_mono = badge_eink_tmpbuf;
+
+	while(1)
+	{
+		// turn the display all white
+		memset(fb_ram, 0xFF, BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT);
+		badge_eink_display(fb_ram, DISPLAY_FLAG_FULL_UPDATE | DISPLAY_FLAG_8BITPIXEL);
+
+		badge_eink_create_bitplane(fb_ram, fb_mono, 0x80, DISPLAY_FLAG_8BITPIXEL);
+		for(int i=0 ; i < 20 ; i++)
+		{
+			eink_update(
+				fb_mono,
+				DISPLAY_FLAG_LUT(1),
+				0,
+				BADGE_EINK_WIDTH
+			);
+		}
+
+		// turn the display all black
+		memset(fb_ram, 0, BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT);
+		badge_eink_display(fb_ram, DISPLAY_FLAG_FULL_UPDATE | DISPLAY_FLAG_8BITPIXEL);
+
+		badge_eink_create_bitplane(fb_ram, fb_mono, 0x80, DISPLAY_FLAG_8BITPIXEL);
+		for(int i=0 ; i < 20 ; i++)
+		{
+			eink_update(
+				fb_mono,
+				DISPLAY_FLAG_LUT(1),
+				0,
+				BADGE_EINK_WIDTH
+			);
+		}
+
+		// draw a random pattern
+		for(int x = 0 ; x < BADGE_EINK_WIDTH ; x++)
+			for(int y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
+				fb_ram[x + y * BADGE_EINK_WIDTH] = rand();
+
+		for(int i = 0 ; i < 1 ; i++)
+		{
+
+		badge_eink_create_bitplane(fb_ram, fb_mono, 0x80, DISPLAY_FLAG_8BITPIXEL);
+		for(int i=0 ; i < 20 ; i++)
+		{
+			eink_update(
+				fb_mono,
+				DISPLAY_FLAG_LUT(1),
+				0,
+				BADGE_EINK_WIDTH
+			);
+		}
+
+		// invert theimage
+		for(int x = 0 ; x < BADGE_EINK_WIDTH ; x++)
+			for(int y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
+				fb_ram[x + y * BADGE_EINK_WIDTH] = ~fb_ram[x+y*BADGE_EINK_WIDTH];
+		}
+	}
+/*
+
+		for(int i = 0 ; i < 1 ; i++)
+		{
+			for(int j = 0 ; j < 10 ; j++)
+				badge_eink_display(buf, DISPLAY_FLAG_LUT(2) | DISPLAY_FLAG_8BITPIXEL);
+			delay(10000);
+			memset(buf, 0, BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT);
+			badge_eink_display(buf, DISPLAY_FLAG_FULL_UPDATE | DISPLAY_FLAG_8BITPIXEL);
+			for(int j = 0 ; j < 10 ; j++)
+				badge_eink_display(buf, DISPLAY_FLAG_LUT(2) | DISPLAY_FLAG_8BITPIXEL);
+			delay(10000);
+		}
+	
+	}
+*/
 }

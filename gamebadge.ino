@@ -2,6 +2,7 @@
 #include "badge/badge_input.h"
 #include "badge/badge_eink.h"
 #include "badge/badge_eink_fb.h"
+#include "badge/badge_leds.h"
 
 #include "loader.h"
 #include "mem.h"
@@ -11,8 +12,9 @@
 
 
 extern "C" {
-extern const unsigned char rom_image[];
-extern const unsigned int rom_image_size;
+extern const unsigned char game_rom[];
+extern const unsigned int game_rom_len;
+extern void burnin();
 };
 
 void setup()
@@ -24,45 +26,17 @@ void setup()
 	int rc;
 
 	badge_init();
+	badge_leds_enable();
 
 	// map the e-ink to the video
 	vid_init();
 
-#if 0
-	// turn the display all black
-	uint8_t * buf = (uint8_t*) malloc(BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT);
-	while(1)
-	{
-	for(int i = 0 ; i < 1 ; i++)
-	{
-		memset(buf, 0xFF, BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT);
-		badge_eink_display_one_layer(buf, DISPLAY_FLAG_FULL_UPDATE);
-		for(int j = 0 ; j < 10 ; j++)
-			badge_eink_display_one_layer(buf, DISPLAY_FLAG_LUT(2));
-		delay(10000);
-		memset(buf, 0, BADGE_EINK_WIDTH*BADGE_EINK_HEIGHT);
-		badge_eink_display_one_layer(buf, DISPLAY_FLAG_FULL_UPDATE);
-		for(int j = 0 ; j < 10 ; j++)
-			badge_eink_display_one_layer(buf, DISPLAY_FLAG_LUT(2));
-		delay(10000);
-	}
-	
-	for(int i=0 ; i < 10 ; i++)
-	{
-		for(int x = 0 ; x < BADGE_EINK_WIDTH ; x++)
-			for(int y = 0 ; y < BADGE_EINK_HEIGHT ; y++)
-				buf[x + y * BADGE_EINK_WIDTH] = ((int)random(2)) ? 0xFF : 0;
-					
-		badge_eink_display_one_layer(buf, DISPLAY_FLAG_FULL_UPDATE);
-		for(int j = 0 ; j < 10 ; j++)
-			badge_eink_display_one_layer(buf, DISPLAY_FLAG_LUT(2));
-	}
-	}
-#endif
+	if(0) burnin();
+
 
 	// setup the ROM image
 	Serial.println("loading rom");
-	rom_load(rom_image, rom_image_size);
+	rom_load(game_rom, game_rom_len);
 	Serial.println("loaded!");
 
 	// startup the emulator
