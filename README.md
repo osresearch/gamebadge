@@ -18,4 +18,4 @@ a compilable `.c` file:
 xxd -i game.rom | sed 's/unsigned/const unsigned/' > game.c
 ```
 
-
+For more info: https://trmm.net/Gamebadge
